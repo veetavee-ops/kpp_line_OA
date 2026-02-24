@@ -59,7 +59,7 @@ function TextPreview({ url }) {
   if (error) return (
     <div className="media-modal-loading media-modal-loading--error">
       <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
       </svg>
       {error}
     </div>
@@ -130,20 +130,20 @@ function LinkModal({ url, onClose }) {
         <div className="media-modal-header">
           <span className="media-modal-title">
             <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-              <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+              <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
             </svg>
             {hostname}
           </span>
           <div className="media-modal-actions">
             <a href={url} target="_blank" rel="noopener noreferrer" className="media-modal-download">
               <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
-                <path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                <path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
               </svg>
               เปิดใน Browser
             </a>
             <button className="media-modal-close" onClick={onClose} aria-label="ปิด">
               <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
               </svg>
             </button>
           </div>
@@ -188,19 +188,19 @@ function MediaModal({ media, onClose }) {
           <div className="media-modal-actions">
             <a href={media.url} target="_blank" rel="noopener noreferrer" className="media-modal-download">
               <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
-                <path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                <path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
               </svg>
               เปิดใน Browser
             </a>
             <a href={media.url} download={media.fileName} className="media-modal-download">
               <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
-                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
               </svg>
               ดาวน์โหลด
             </a>
             <button className="media-modal-close" onClick={onClose} aria-label="ปิด">
               <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
               </svg>
             </button>
           </div>
@@ -227,7 +227,7 @@ function MediaModal({ media, onClose }) {
             <div className="media-modal-audio-wrap">
               <div className="media-modal-audio-icon">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="40" height="40">
-                  <path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/>
+                  <path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z" />
                 </svg>
               </div>
               <div className="media-modal-audio-name">{media.fileName}</div>
@@ -258,13 +258,13 @@ function MediaModal({ media, onClose }) {
               <p className="media-modal-no-preview-hint">{media.fileName}</p>
               <a href={media.url} target="_blank" rel="noopener noreferrer" className="media-modal-dl-btn">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                  <path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                  <path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
                 </svg>
                 เปิดใน Browser
               </a>
               <a href={media.url} download={media.fileName} className="media-modal-dl-btn media-modal-dl-btn--secondary">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                  <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
                 </svg>
                 ดาวน์โหลด
               </a>
@@ -343,7 +343,10 @@ export default function MessageBubble({ msg, prevMsg }) {
 
               {/* ── IMAGES (disk storage: metadata.localPaths) ── */}
               {msg.messageType === 'image' && msg.metadata?.localPaths?.length > 0 && (
-                <div className="msg-images">
+                <div
+                  className="msg-images"
+                  data-count={Math.min(msg.metadata.localPaths.length, 3)}
+                >
                   {msg.metadata.localPaths.map((lp, i) => {
                     const url = mediaUrl(lp)
                     return (
@@ -377,7 +380,7 @@ export default function MessageBubble({ msg, prevMsg }) {
                 return (
                   <div className="msg-file">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                      <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/>
+                      <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
                     </svg>
                     วิดีโอ
                     {msg.metadata?.duration != null && (
@@ -420,7 +423,7 @@ export default function MessageBubble({ msg, prevMsg }) {
                       </div>
                       <div className="msg-file-card-arrow">
                         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                          <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/>
+                          <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
                         </svg>
                       </div>
                     </div>
@@ -437,7 +440,7 @@ export default function MessageBubble({ msg, prevMsg }) {
                     </div>
                     <div className="msg-file-card-arrow msg-file-card-arrow--missing">
                       <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
                       </svg>
                     </div>
                   </div>
@@ -454,7 +457,7 @@ export default function MessageBubble({ msg, prevMsg }) {
                 >
                   <span className="msg-location-pin">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z"/>
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 010-5 2.5 2.5 0 010 5z" />
                     </svg>
                   </span>
                   <div className="msg-location-info">
@@ -463,7 +466,7 @@ export default function MessageBubble({ msg, prevMsg }) {
                   </div>
                   <span className="msg-location-arrow">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                      <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                      <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
                     </svg>
                   </span>
                 </a>
@@ -491,7 +494,7 @@ export default function MessageBubble({ msg, prevMsg }) {
         <div className="lightbox-overlay" onClick={closeLightbox}>
           <button className="lightbox-close" onClick={closeLightbox} aria-label="ปิด">
             <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
             </svg>
           </button>
           <img className="lightbox-img" src={lightboxImg} alt="ภาพขยาย" onClick={e => e.stopPropagation()} />
