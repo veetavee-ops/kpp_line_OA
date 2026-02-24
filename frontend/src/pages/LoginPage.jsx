@@ -59,9 +59,13 @@ export default function LoginPage({ onLogin }) {
     <div className="login-page">
       <div className="login-card">
         <div className="login-header">
-          <div className="login-icon">💬</div>
-          <h1>LINE Archive</h1>
-          <p>Chat History Management</p>
+          <div className="login-icon">
+            <svg viewBox="0 0 24 24" fill="white" width="28" height="28">
+              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+            </svg>
+          </div>
+          <h1>Sotus LINE OA</h1>
+          <p>Admin Dashboard</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">

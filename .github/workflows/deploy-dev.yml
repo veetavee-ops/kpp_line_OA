@@ -1,0 +1,46 @@
+name: Deploy LINE OA (Dev)
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Backend (Dev)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: sotuseng/lineoa_backend:dev
+
+      - name: Build and push Frontend (Dev)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: sotuseng/lineoa_frontend:dev
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL_DEV || secrets.VITE_API_URL }}
+
+      - name: Deploy to Server (Dev)
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST_DEV || secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER_DEV || secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD_DEV || secrets.SERVER_PASSWORD }}
+          script: |
+            cd /home/worker/worker-dev
+            docker compose pull
+            docker compose up -d

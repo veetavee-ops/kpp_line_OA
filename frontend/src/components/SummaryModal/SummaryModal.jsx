@@ -26,16 +26,17 @@ export default function SummaryModal({ summary, onClose, loading, error }) {
             <h3 key={index} className="summary-heading">{text}</h3>
           )
         }
-        // Emoji headers
-        else if (line.match(/^(📊|📌|✨|⚠️|🎯|💡)\s*\*?\*?(.+)\*?\*?/)) {
+        // Emoji headers (รวม 📅 สำหรับหัวข้อวันที่ใน multi-day summary)
+        else if (line.match(/^(📊|📌|✨|⚠️|🎯|💡|📅)\s*\*?\*?(.+)\*?\*?/)) {
           if (currentList.length > 0) {
             elements.push(renderList(currentList, listType, listCounter++))
             currentList = []
             listType = null
           }
-          const match = line.match(/^(📊|📌|✨|⚠️|🎯|💡)\s*\*?\*?(.+)\*?\*?/)
+          const match = line.match(/^(📊|📌|✨|⚠️|🎯|💡|📅)\s*\*?\*?(.+)\*?\*?/)
+          const isDateHeader = match[1] === '📅'
           elements.push(
-            <div key={index} className="summary-section">
+            <div key={index} className={`summary-section ${isDateHeader ? 'summary-section--date' : ''}`}>
               <div className="section-icon">{match[1]}</div>
               <h3 className="section-title">{match[2].replace(/\*\*/g, '')}</h3>
             </div>
@@ -174,10 +175,16 @@ export default function SummaryModal({ summary, onClose, loading, error }) {
           <div className="modal-header-content">
             <div className="modal-title-icon">🤖</div>
             <div>
-              <h2 className="modal-title">สรุปบทสนทนาทั้งวัน</h2>
+              <h2 className="modal-title">
+                {summary?.dayCount > 1
+                  ? `สรุปบทสนทนา ${summary.dayCount} วัน`
+                  : 'สรุปบทสนทนาทั้งวัน'}
+              </h2>
               {summary && !loading && (
                 <p className="modal-subtitle">
-                  {summary.messageCount} ข้อความจาก {summary.groupCount} กลุ่ม/แชท
+                  {summary.dateRange
+                    ? summary.dateRange
+                    : `${summary.messageCount} ข้อความจาก ${summary.groupCount} กลุ่ม/แชท`}
                 </p>
               )}
             </div>
@@ -212,13 +219,19 @@ export default function SummaryModal({ summary, onClose, loading, error }) {
               
               <div className="summary-footer">
                 <div className="summary-meta">
+                  {summary.dayCount > 1 && (
+                    <span className="meta-item">
+                      <span className="meta-icon">📅</span>
+                      {summary.dayCount} วัน
+                    </span>
+                  )}
                   <span className="meta-item">
                     <span className="meta-icon">💬</span>
                     {summary.messageCount} ข้อความ
                   </span>
                   <span className="meta-item">
                     <span className="meta-icon">👥</span>
-                    {summary.groupCount} กลุ่ม
+                    {summary.groupCount} กลุ่ม/แชท
                   </span>
                   {summary.model && (
                     <span className="meta-item">

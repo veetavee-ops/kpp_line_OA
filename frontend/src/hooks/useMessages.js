@@ -1,46 +1,47 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-
 import { useState, useEffect, useCallback } from 'react'
 import { fetchMessages, fetchGroups } from '../api/messages'
 
-export function useGroups(date, refreshKey = 0) { // ✅ เพิ่ม refreshKey
+// Groups: no date filter — always returns all groups/private chats
+export function useGroups(refreshKey = 0) {
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
 
-    fetchGroups(date)
-      .then(data => {
-        if (!cancelled) setGroups(data)
-      })
+    fetchGroups()
+      .then(data => { if (!cancelled) setGroups(data) })
       .catch(console.error)
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+      .finally(() => { if (!cancelled) setLoading(false) })
 
-    return () => {
-      cancelled = true
-    }
-  }, [date, refreshKey]) // ✅ เพิ่ม refreshKey ใน dependency
+    return () => { cancelled = true }
+  }, [refreshKey])
 
   return { groups, loading }
 }
 
-export function useMessages(groupId, date) {
+// Messages: fetch with pagination
+export function useMessages(groupId) {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
 
+  // Pagination state
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const limit = 50
+
   useEffect(() => {
-    if (!groupId || !date) return
+    if (!groupId) return
 
     let cancelled = false
     setLoading(true)
+    setHasMore(true) // reset on group change
 
-    fetchMessages({ groupId, date })
+    fetchMessages({ groupId, limit })
       .then(data => {
         if (!cancelled) {
           setMessages(data)
+          setHasMore(data.length === limit)
           setLoading(false)
         }
       })
@@ -48,23 +49,44 @@ export function useMessages(groupId, date) {
         console.error(error)
         if (!cancelled) {
           setMessages([])
+          setHasMore(false)
           setLoading(false)
         }
       })
 
-    return () => {
-      cancelled = true
+    return () => { cancelled = true }
+  }, [groupId])
+
+  const loadMore = useCallback(async () => {
+    if (!groupId || loadingMore || !hasMore || messages.length === 0) return
+
+    setLoadingMore(true)
+    try {
+      const oldestMessage = messages[0]
+      const data = await fetchMessages({
+        groupId,
+        limit,
+        before: oldestMessage.timestamp
+      })
+
+      if (data.length > 0) {
+        setMessages(prev => [...data, ...prev])
+      }
+      setHasMore(data.length === limit)
+    } catch (error) {
+      console.error('Failed to load older messages', error)
+      setHasMore(false)
+    } finally {
+      setLoadingMore(false)
     }
-  }, [groupId, date])
+  }, [groupId, loadingMore, hasMore, messages])
 
   const addMessage = useCallback((newMessage) => {
     setMessages(prev => {
-      if (prev.find(m => m.id === newMessage.id)) {
-        return prev
-      }
+      if (prev.find(m => m.id === newMessage.id)) return prev
       return [...prev, newMessage]
     })
   }, [])
 
-  return { messages, loading, addMessage }
+  return { messages, loading, hasMore, loadingMore, loadMore, addMessage }
 }

@@ -17,7 +17,6 @@ export default function RegisterPage() {
         setLoading(true)
 
         try {
-            // Use direct axios call since it's a special endpoint
             const API_URL = import.meta.env.VITE_API_URL
             await axios.post(`${API_URL}/api/auth/register`, {
                 username,
@@ -30,7 +29,6 @@ export default function RegisterPage() {
             setPassword('')
             setInviteCode('')
 
-            // Optional: Redirect to login after 2 seconds
             setTimeout(() => {
                 window.location.href = '/'
             }, 2000)
@@ -46,7 +44,11 @@ export default function RegisterPage() {
         <div className="login-page">
             <div className="login-card">
                 <div className="login-header">
-                    <div className="login-icon" style={{ background: '#ff9800' }}>🔐</div>
+                    <div className="login-icon">
+                        <svg viewBox="0 0 24 24" fill="white" width="28" height="28">
+                            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                        </svg>
+                    </div>
                     <h1>Admin Register</h1>
                     <p>Create New Admin Account</p>
                 </div>
@@ -87,17 +89,16 @@ export default function RegisterPage() {
                     </div>
 
                     {error && <div className="error-message">⚠️ {error}</div>}
-                    {success && <div className="success-message" style={{ color: 'green', fontSize: '13px', marginBottom: '15px', textAlign: 'center' }}>{success}</div>}
+                    {success && <div className="success-message">{success}</div>}
 
-                    <button type="submit" className="btn-login" disabled={loading} style={{ background: '#ff9800' }}>
+                    <button type="submit" className="btn-login" disabled={loading}>
                         {loading ? 'Creating...' : 'Register'}
                     </button>
 
                     <button
                         type="button"
-                        className="btn-link"
+                        className="btn-back"
                         onClick={() => window.location.href = '/'}
-                        style={{ marginTop: '10px', background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '12px' }}
                     >
                         ← Back to Login
                     </button>

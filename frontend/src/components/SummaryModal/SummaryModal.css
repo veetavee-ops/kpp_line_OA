@@ -209,6 +209,26 @@
   border-bottom: 2px solid #667eea;
 }
 
+/* หัวข้อวันที่ (📅) สำหรับ multi-day summary */
+.summary-section--date {
+  margin: 28px 0 12px;
+  padding: 10px 16px;
+  padding-bottom: 10px;
+  background: linear-gradient(90deg, #f0f4ff 0%, #fafbff 100%);
+  border-left: 4px solid #667eea;
+  border-bottom: none;
+  border-radius: 0 10px 10px 0;
+}
+
+.summary-section--date .section-title {
+  font-size: 16px;
+  color: #3730a3;
+}
+
+.summary-section--date .section-icon {
+  font-size: 20px;
+}
+
 .section-icon {
   font-size: 28px;
   line-height: 1;

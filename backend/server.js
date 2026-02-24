@@ -5,6 +5,8 @@ const app = require('./app');
 const sequelize = require('./config/database');
 const corsOptions = require('./config/cors');
 const setupSockets = require('./sockets/index');
+const { startCleanupCron } = require('./services/cleanupService');
+
 
 const server = http.createServer(app);
 
@@ -27,6 +29,7 @@ sequelize.sync({ alter: true })
       console.log(`🔌 Socket.IO ready`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log('='.repeat(50));
+      startCleanupCron();
     });
   })
   .catch((err) => {

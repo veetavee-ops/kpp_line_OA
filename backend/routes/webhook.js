@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const line = require('@line/bot-sdk');
+const fs = require('fs');
+const path = require('path');
 
-const { Message, User, Group, MessageAttachment } = require('../models/index');
+const { Message, User, Group } = require('../models/index');
 const { getProfile, client } = require('../services/lineService');
 
 const lineConfig = {
@@ -10,15 +12,34 @@ const lineConfig = {
     channelSecret: process.env.CHANNEL_SECRET,
 };
 
+// ─── Media Directory Setup ─────────────────────────────────────────────────────
+function ensureDir(dirPath) {
+    if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
+}
+const MEDIA_DIR = path.join(__dirname, '..', 'media');
+ensureDir(path.join(MEDIA_DIR, 'images'));
+ensureDir(path.join(MEDIA_DIR, 'videos'));
+ensureDir(path.join(MEDIA_DIR, 'audios'));
+ensureDir(path.join(MEDIA_DIR, 'files'));
+
+// ─── Download helper ───────────────────────────────────────────────────────────
+async function downloadAsBuffer(messageId) {
+    const stream = await client.getMessageContent(messageId);
+    const chunks = [];
+    return new Promise((resolve, reject) => {
+        stream.on('data', chunk => chunks.push(chunk));
+        stream.on('error', reject);
+        stream.on('end', () => resolve(Buffer.concat(chunks)));
+    });
+}
+
 // Image grouping configuration
 const pendingImageGroups = new Map();
 const IMAGE_GROUP_TIMEOUT = 5000; // 5 seconds
 
 /**
  * LINE Webhook endpoint
- * Receives events from LINE Messaging API
  */
-
 const webhookMiddleware = process.env.NODE_ENV === 'production'
     ? line.middleware(lineConfig)
     : (req, res, next) => {
@@ -27,10 +48,8 @@ const webhookMiddleware = process.env.NODE_ENV === 'production'
         }
         next();
     };
-router.post('/', webhookMiddleware, async (req, res) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] 🔔 Webhook received - ${req.body.events?.length || 0} events`);
 
+router.post('/', webhookMiddleware, async (req, res) => {
     try {
         await Promise.all(req.body.events.map(event => handleEvent(event, req.app.locals.io)));
         res.json({ status: 'ok' });
@@ -49,43 +68,17 @@ async function handleEvent(event, io) {
     const groupId = source.groupId || null;
     const sourceType = source.type;
 
-    // --- GROUP ---
+    // --- GROUP upsert ---
     if (sourceType === 'group' && groupId) {
         try {
-            let group = await Group.findByPk(groupId);
+            const group = await Group.findByPk(groupId);
             if (!group) {
                 const summary = await client.getGroupSummary(groupId);
-                await Group.upsert({
-                    groupId,
-                    groupName: summary.groupName,
-                    pictureUrl: summary.pictureUrl
-                });
+                await Group.upsert({ groupId, groupName: summary.groupName, pictureUrl: summary.pictureUrl });
             }
         } catch (e) {
             console.error('❌ Group Error:', e.message);
         }
-        // try {
-        //     let group = await Group.findByPk(groupId);
-        //     if (!group) {
-        //         let groupName = 'Unknown Group';
-        //         let pictureUrl = null;
-
-        //         // ลอง fetch จาก LINE API ก่อน
-        //         try {
-        //             const summary = await client.getGroupSummary(groupId);
-        //             groupName = summary.groupName;
-        //             pictureUrl = summary.pictureUrl;
-        //         } catch (apiErr) {
-        //             // ✅ ถ้า LINE API fail (เช่น mock groupId) ให้ใช้ fallback
-        //             console.warn(`⚠️ Cannot fetch group summary for ${groupId}, using fallback`);
-        //         }
-
-        //         // ✅ upsert ไม่ว่าจะได้ข้อมูลจาก LINE หรือ fallback
-        //         await Group.upsert({ groupId, groupName, pictureUrl });
-        //     }
-        // } catch (e) {
-        //     console.error('❌ Group Error:', e.message);
-        // }
     }
 
     if (message.type === 'image') {
@@ -95,46 +88,22 @@ async function handleEvent(event, io) {
     }
 }
 
+// ─── Image Message — grouped then saved to disk ────────────────────────────────
 async function handleImageMessage(event, userId, groupId, sourceType, message, io) {
     const groupKey = `${userId}-${groupId || 'private'}`;
 
     try {
-        let user = await User.findByPk(userId);
+        const user = await User.findByPk(userId);
         if (!user) {
             const profile = await getProfile(event.source);
-            await User.upsert({
-                userId,
-                displayName: profile.displayName,
-                pictureUrl: profile.pictureUrl
-            });
+            await User.upsert({ userId, displayName: profile.displayName, pictureUrl: profile.pictureUrl });
         }
     } catch (e) {
         console.error('❌ User Error (in handleImageMessage):', e.message);
         throw e;
     }
-    // try {
-    //     let user = await User.findByPk(userId);
-    //     if (!user) {
-    //         let displayName = 'Unknown';
-    //         let pictureUrl = null;
 
-    //         try {
-    //             const profile = await getProfile(event.source);
-    //             displayName = profile.displayName;
-    //             pictureUrl = profile.pictureUrl;
-    //         } catch (apiErr) {
-    //             console.warn(`⚠️ Cannot fetch profile for ${userId}, using fallback`);
-    //         }
-
-    //         await User.upsert({ userId, displayName, pictureUrl });
-    //     }
-    // } catch (e) {
-    //     console.error('❌ User Error:', e.message);
-    //     throw e;
-    // }
-
-    const buffer = await downloadImageBuffer(message.id);
-
+    const buffer = await downloadAsBuffer(message.id);
     const imageData = {
         lineMessageId: message.id,
         buffer,
@@ -144,23 +113,17 @@ async function handleImageMessage(event, userId, groupId, sourceType, message, i
     if (pendingImageGroups.has(groupKey)) {
         const pending = pendingImageGroups.get(groupKey);
         pending.images.push(imageData);
-
         clearTimeout(pending.timer);
         pending.timer = setTimeout(() => saveImageGroup(groupKey, io), IMAGE_GROUP_TIMEOUT);
-
     } else {
-
         const newMessage = await Message.create({
             messageId: message.id,
             messageType: 'image',
             timestamp: new Date(event.timestamp),
-            userId,
-            groupId,
-            sourceType,
+            userId, groupId, sourceType,
             text: null,
             metadata: { imageCount: 1 }
         });
-
         pendingImageGroups.set(groupKey, {
             messageId: newMessage.id,
             images: [imageData],
@@ -169,54 +132,31 @@ async function handleImageMessage(event, userId, groupId, sourceType, message, i
     }
 }
 
-async function downloadImageBuffer(messageId) {
-    const stream = await client.getMessageContent(messageId);
-    const chunks = [];
-
-    return new Promise((resolve, reject) => {
-        stream.on('data', chunk => chunks.push(chunk));
-        stream.on('error', reject);
-        stream.on('end', () => resolve(Buffer.concat(chunks)));
-    });
-}
-
-// ✅ แก้ให้ emit socket event
 async function saveImageGroup(groupKey, io) {
     const pending = pendingImageGroups.get(groupKey);
     if (!pending) return;
-
     try {
+        const localPaths = [];
+        for (const img of pending.images) {
+            const fileName = `${img.lineMessageId}.jpg`;
+            const filePath = path.join(MEDIA_DIR, 'images', fileName);
+            fs.writeFileSync(filePath, img.buffer);
+            localPaths.push(`/media/images/${fileName}`);
+        }
+
         await Message.update(
-            { metadata: { imageCount: pending.images.length } },
+            { metadata: { imageCount: localPaths.length, localPaths } },
             { where: { id: pending.messageId } }
         );
 
-        for (let i = 0; i < pending.images.length; i++) {
-            const img = pending.images[i];
-            await MessageAttachment.create({
-                messageId: pending.messageId,
-                sequenceNumber: i,
-                fileData: img.buffer,
-                fileType: 'image/jpeg',
-                fileName: `${img.lineMessageId}.jpg`
-            });
-        }
-
-        // ✅ ดึงข้อมูล Message เต็มพร้อม includes
         const fullMessage = await Message.findByPk(pending.messageId, {
             include: [
                 { model: User, as: 'user', attributes: ['displayName', 'pictureUrl'] },
                 { model: Group, as: 'group', attributes: ['groupName', 'pictureUrl'] },
-                { model: MessageAttachment, as: 'attachments', attributes: ['id', 'fileName', 'fileType', 'sequenceNumber'] }
             ]
         });
 
-        // ✅ Emit Socket Event
-        const date = fullMessage.timestamp.toISOString().split('T')[0];
-        const targetGroupId = fullMessage.groupId || `private_${fullMessage.userId}`;
-        // ✅ Emit Socket Event (Broadcast Global)
         io.emit('new-message', fullMessage);
-
     } catch (err) {
         console.error('❌ บันทึก image group ล้มเหลว:', err.message);
     } finally {
@@ -224,52 +164,24 @@ async function saveImageGroup(groupKey, io) {
     }
 }
 
-// ✅ แก้ให้ emit socket event
+// ─── Non-image messages ────────────────────────────────────────────────────────
 async function handleNonImageMessage(event, userId, groupId, sourceType, message, io) {
-    // ✅ ต้องบันทึก User ก่อน (ย้ายมาจาก handleEvent)
     try {
-        let user = await User.findByPk(userId);
+        const user = await User.findByPk(userId);
         if (!user) {
             const profile = await getProfile(event.source);
-            await User.upsert({
-                userId,
-                displayName: profile.displayName,
-                pictureUrl: profile.pictureUrl
-            });
+            await User.upsert({ userId, displayName: profile.displayName, pictureUrl: profile.pictureUrl });
         }
     } catch (e) {
         console.error('❌ User Error (in handleNonImageMessage):', e.message);
-        // ถ้าบันทึก User ไม่ได้ ก็ไม่ต้องบันทึก Message
         throw e;
     }
-    // try {
-    //     let user = await User.findByPk(userId);
-    //     if (!user) {
-    //         let displayName = 'Unknown';
-    //         let pictureUrl = null;
-
-    //         try {
-    //             const profile = await getProfile(event.source);
-    //             displayName = profile.displayName;
-    //             pictureUrl = profile.pictureUrl;
-    //         } catch (apiErr) {
-    //             console.warn(`⚠️ Cannot fetch profile for ${userId}, using fallback`);
-    //         }
-
-    //         await User.upsert({ userId, displayName, pictureUrl });
-    //     }
-    // } catch (e) {
-    //     console.error('❌ User Error:', e.message);
-    //     throw e;
-    // }
 
     let dbPayload = {
         messageId: message.id,
         messageType: message.type,
         timestamp: new Date(event.timestamp),
-        userId,
-        groupId,
-        sourceType,
+        userId, groupId, sourceType,
         metadata: {}
     };
 
@@ -277,15 +189,62 @@ async function handleNonImageMessage(event, userId, groupId, sourceType, message
         case 'text':
             dbPayload.text = message.text;
             break;
-        case 'video':
-            dbPayload.metadata = { duration: message.duration };
+
+        case 'video': {
+            try {
+                const buffer = await downloadAsBuffer(message.id);
+                const fileName = `${message.id}.mp4`;
+                const filePath = path.join(MEDIA_DIR, 'videos', fileName);
+                fs.writeFileSync(filePath, buffer);
+                dbPayload.metadata = {
+                    localPath: `/media/videos/${fileName}`,
+                    duration: message.duration,
+                    fileSize: buffer.length
+                };
+            } catch (e) {
+                console.error('❌ Video download fail:', e.message);
+                dbPayload.metadata = { duration: message.duration };
+            }
             break;
-        case 'audio':
-            dbPayload.metadata = { duration: message.duration };
+        }
+
+        case 'audio': {
+            try {
+                const buffer = await downloadAsBuffer(message.id);
+                const fileName = `${message.id}.m4a`;
+                const filePath = path.join(MEDIA_DIR, 'audios', fileName);
+                fs.writeFileSync(filePath, buffer);
+                dbPayload.metadata = {
+                    localPath: `/media/audios/${fileName}`,
+                    duration: message.duration,
+                    fileSize: buffer.length
+                };
+            } catch (e) {
+                console.error('❌ Audio download fail:', e.message);
+                dbPayload.metadata = { duration: message.duration };
+            }
             break;
-        case 'file':
-            dbPayload.metadata = { fileName: message.fileName, fileSize: message.fileSize };
+        }
+
+        case 'file': {
+            try {
+                const buffer = await downloadAsBuffer(message.id);
+                const safeFileName = message.fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const diskName = `${message.id}_${safeFileName}`;
+                const filePath = path.join(MEDIA_DIR, 'files', diskName);
+                fs.writeFileSync(filePath, buffer);
+                dbPayload.metadata = {
+                    localPath: `/media/files/${diskName}`,
+                    fileName: message.fileName,
+                    fileSize: message.fileSize ?? buffer.length
+                };
+            } catch (e) {
+                console.error('❌ File download fail:', e.message);
+                dbPayload.metadata = { fileName: message.fileName, fileSize: message.fileSize };
+            }
             break;
+        }
+
         case 'location':
             dbPayload.metadata = {
                 title: message.title,
@@ -294,6 +253,7 @@ async function handleNonImageMessage(event, userId, groupId, sourceType, message
                 lng: message.longitude
             };
             break;
+
         case 'sticker':
             dbPayload.metadata = {
                 packageId: message.packageId,
@@ -312,11 +272,7 @@ async function handleNonImageMessage(event, userId, groupId, sourceType, message
         ]
     });
 
-    const date = fullMessage.timestamp.toISOString().split('T')[0];
-    const targetGroupId = fullMessage.groupId || `private_${fullMessage.userId}`;
-    // ✅ Emit Socket Event (Broadcast Global)
     io.emit('new-message', fullMessage);
-
     return fullMessage;
 }
 

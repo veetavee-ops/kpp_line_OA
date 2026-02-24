@@ -34,11 +34,11 @@ axiosInstance.interceptors.response.use(
 )
 
 /**
- * Fetch all groups (private chats and group chats) for a specific date
+ * Fetch all groups (private chats and group chats) — no date filter
  */
-export async function fetchGroups(date) {
+export async function fetchGroups() {
   try {
-    const res = await axiosInstance.get('/api/groups', { params: { date } })
+    const res = await axiosInstance.get('/api/groups')
     return res.data
   } catch (error) {
     console.error('Error fetching groups:', error)
@@ -47,26 +47,30 @@ export async function fetchGroups(date) {
 }
 
 /**
- * Fetch list of dates that have messages
+ * Fetch list of dates that have messages within the given range
+ * rangeValue: number, rangeUnit: 'day' | 'month' | 'year'
  */
-export async function fetchAvailableDates() {
+export async function fetchAvailableDates(rangeValue = 7, rangeUnit = 'day') {
   try {
-    const res = await axiosInstance.get('/api/dates')
+    const res = await axiosInstance.get('/api/dates', {
+      params: { rangeValue, rangeUnit }
+    })
     return res.data
   } catch (error) {
     console.error('Error fetching dates:', error)
-    return [] // Return empty array on error to allow fallback
+    return []
   }
 }
 
 /**
- * Fetch messages for a specific group and date
+ * Fetch messages for a specific group with optional pagination
  */
-export async function fetchMessages({ groupId, date } = {}) {
+export async function fetchMessages({ groupId, limit, before } = {}) {
   try {
     const params = {}
     if (groupId) params.groupId = groupId
-    if (date) params.date = date
+    if (limit) params.limit = limit
+    if (before) params.before = before
 
     const res = await axiosInstance.get('/api/messages', { params })
     return res.data
@@ -84,11 +88,17 @@ export function getAttachmentUrl(attachmentId) {
 }
 
 /**
- * Generate AI summary for all messages on a specific date
+ * Generate AI summary for all messages on a specific date (or 'all' for full range)
+ * range: { rangeValue, rangeUnit } — used when date === 'all'
  */
-export async function summarizeDay(date) {
+export async function summarizeDay(date, range = null) {
   try {
-    const res = await axiosInstance.post('/api/messages/summarize-day', { date })
+    const body = { date }
+    if (range) {
+      body.rangeValue = range.rangeValue
+      body.rangeUnit = range.rangeUnit
+    }
+    const res = await axiosInstance.post('/api/messages/summarize-day', body)
     return res.data
   } catch (error) {
     console.error('Error summarizing day:', error)

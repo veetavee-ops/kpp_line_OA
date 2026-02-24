@@ -1,62 +1,67 @@
-import { useState, useEffect } from 'react' // ✅ เพิ่ม useState, useEffect
+import { useState, useEffect } from 'react'
 import { formatDateLabel, getInitials, getColor, getLast7Days } from '../../utils/helpers'
-import { fetchAvailableDates } from '../../api/messages' // ✅ Import API
+import { fetchAvailableDates } from '../../api/messages'
 import './Sidebar.css'
 
+const RANGE_VALUES = [1, 2, 3, 5, 7, 14, 30, 60, 90]
+const RANGE_UNITS = [
+  { value: 'day', label: 'วัน' },
+  { value: 'month', label: 'เดือน' },
+  { value: 'year', label: 'ปี' },
+]
+
 export default function Sidebar({
-  isOpen, // New prop
-  onClose, // New prop
-  refreshKey, // ✅ Receive refreshKey
+  isOpen,
+  onClose,
+  refreshKey,
   selectedDate,
   selectedGroup,
   privateChats,
   realGroups,
   onSelectDate,
   onSelectGroup,
-  onSummarizeDay
+  onSummarizeDay,
+  onRangeChange
 }) {
-  // const dates = getLast7Days() // ❌ Remove static dates
   const [dates, setDates] = useState([])
   const [loadingDates, setLoadingDates] = useState(true)
 
-  // ✅ Fetch dates on mount
+  // Range filter state
+  const [rangeValue, setRangeValue] = useState(7)
+  const [rangeUnit, setRangeUnit] = useState('day')
+
+  // Fetch dates whenever range or refreshKey changes
   useEffect(() => {
     const loadDates = async () => {
+      setLoadingDates(true)
       try {
-        const availableDates = await fetchAvailableDates()
+        const availableDates = await fetchAvailableDates(rangeValue, rangeUnit)
 
         if (availableDates.length > 0) {
           setDates(availableDates)
-
-          // If current selected date is not in the list, select the newest one
-          if (!availableDates.includes(selectedDate)) {
-            // Optional: Force select newest date? 
-            // Better to clear selection or select first one if user hasn't chosen?
-            // Actually, App.jsx defaults to "today". If "today" has no messages, we might want to switch.
-            // But for now, let's just populate the list. User can switch.
-            // onSelectDate(availableDates[0]) // Safer to let user decide or App logic handle it, but let's just set the list.
-
-            // Improvement: If "today" (default) is not in list, maybe switch to newest available?
-            if (selectedDate === new Date().toISOString().split('T')[0]) {
-              onSelectDate(availableDates[0])
-            }
+          // If current selectedDate is not in re-fetched list, select newest
+          if (!availableDates.includes(selectedDate) && selectedDate !== 'all') {
+            onSelectDate(availableDates[0])
           }
         } else {
-          // Fallback to today if no messages ever
-          setDates([new Date().toISOString().split('T')[0]])
+          setDates([])
         }
       } catch (err) {
         console.error('Failed to load dates', err)
-        setDates(getLast7Days()) // Fallback to last 7 days on error
+        setDates(getLast7Days())
       } finally {
         setLoadingDates(false)
       }
     }
-
     loadDates()
-  }, [refreshKey]) // ✅ Add refreshKey dependency
+  }, [rangeValue, rangeUnit, refreshKey])
 
-  // ✅ สถานะการเปิด-ปิด Dropdown
+  // Notify parent when range changes
+  useEffect(() => {
+    onRangeChange?.({ rangeValue, rangeUnit })
+  }, [rangeValue, rangeUnit])
+
+  const [isControlsOpen, setIsControlsOpen] = useState(true)
   const [isPrivateOpen, setIsPrivateOpen] = useState(true)
   const [isGroupsOpen, setIsGroupsOpen] = useState(true)
 
@@ -67,20 +72,60 @@ export default function Sidebar({
         onClick={onClose}
       />
       <aside className={`sidebar ${isOpen ? 'active' : ''}`}>
-        <div className="sidebar-header">
-          <div className="logo">
-            <div className="logo-icon">🤖</div>
+        <div className={`sidebar-header${isControlsOpen ? '' : ' sidebar-header--collapsed'}`}>
+          <div className="sidebar-brand" onClick={() => setIsControlsOpen(v => !v)}>
             <div>
-              <div className="logo-title">SOTUS Engineering LINE</div>
-              {/* <div className="logo-sub">ผู้ช่วยจัดการ line</div> */}
+              <div className="sidebar-brand-title">ตั้งค่าการสรุป AI</div>
+              <div className="sidebar-brand-sub">เลือกช่วงเวลาและวันที่</div>
             </div>
-            {/* Close button for mobile */}
-            <button className="sidebar-close-btn" onClick={onClose}>×</button>
+            <span className="chevron">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"
+                style={{ transform: isControlsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                <path d="M7 10l5 5 5-5z" />
+              </svg>
+            </span>
           </div>
 
-          <div className="controls-section">
+          {isControlsOpen && <div className="controls-section">
+
+            {/* ── Range filter row ── */}
+            <div>
+              <label className="input-label">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+                  <path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z" />
+                </svg>
+                ย้อนหลัง
+              </label>
+              <div className="range-filter-row">
+                <select
+                  className="range-select range-value"
+                  value={rangeValue}
+                  onChange={e => setRangeValue(Number(e.target.value))}
+                >
+                  {RANGE_VALUES.map(v => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+                <select
+                  className="range-select range-unit"
+                  value={rangeUnit}
+                  onChange={e => setRangeUnit(e.target.value)}
+                >
+                  {RANGE_UNITS.map(u => (
+                    <option key={u.value} value={u.value}>{u.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* ── AI Summary date dropdown ── */}
             <div className="date-select-wrapper">
-              <label htmlFor="date-select" className="input-label">📅 เลือกวันที่ {loadingDates ? '(Loading...)' : ''}</label>
+              <label htmlFor="date-select" className="input-label">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+                  <path d="M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z" />
+                </svg>
+                วันที่สรุป {loadingDates ? '…' : ''}
+              </label>
               <select
                 id="date-select"
                 className="date-dropdown"
@@ -88,30 +133,53 @@ export default function Sidebar({
                 onChange={(e) => onSelectDate(e.target.value)}
                 disabled={loadingDates}
               >
+                <option value="all">ทั้งหมด ({dates.length} วัน)</option>
                 {dates.map(d => (
                   <option key={d} value={d}>
                     {formatDateLabel(d)} ({d.slice(5)})
                   </option>
                 ))}
               </select>
+              <div className="date-hint">เลือกวันเพื่อให้ AI สรุปแชทของวันนั้น</div>
             </div>
 
             <button className="btn-summarize-day" onClick={onSummarizeDay}>
-              ✨ สรุปภาพรวมทั้งวัน
+              <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
+              </svg>
+              สรุป
             </button>
-          </div>
+          </div>}
         </div>
 
         <div className="sidebar-content">
-          {/* ✅ Dropdown แชทส่วนตัว */}
 
+          {/* ── Content Header ── */}
+          <div className="content-header">
+            <div className="content-header-left">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+              </svg>
+              <span>แชทและกลุ่ม</span>
+            </div>
+            <span className="content-header-count">
+              {privateChats.length + realGroups.length}
+            </span>
+          </div>
+
+          {/* ── แชทส่วนตัว ── */}
           <div className={`section ${isPrivateOpen ? 'is-open' : ''}`}>
-            <div
-              className="section-header-clickable"
-              onClick={() => setIsPrivateOpen(!isPrivateOpen)}
-            >
-              <span className="section-title">💬 แชทส่วนตัว ({privateChats.length})</span>
-              <span className="chevron">{isPrivateOpen ? '▼' : '▶'}</span>
+            <div className="section-header-clickable" onClick={() => setIsPrivateOpen(v => !v)}>
+              <span className="section-title">
+                แชทส่วนตัว
+                {privateChats.length > 0 && <span className="section-count">{privateChats.length}</span>}
+              </span>
+              <span className="chevron">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"
+                  style={{ transform: isPrivateOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                  <path d="M7 10l5 5 5-5z" />
+                </svg>
+              </span>
             </div>
 
             {isPrivateOpen && (
@@ -126,7 +194,9 @@ export default function Sidebar({
                       onClick={() => onSelectGroup(g.groupId)}
                     >
                       <div className="group-avatar" style={{ background: getColor(g.groupName) }}>
-                        👤
+                        <svg viewBox="0 0 24 24" fill="white" width="14" height="14">
+                          <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                        </svg>
                       </div>
                       <span className="group-name">{g.groupName}</span>
                     </button>
@@ -136,15 +206,19 @@ export default function Sidebar({
             )}
           </div>
 
-
-          {/* ✅ Dropdown กลุ่ม */}
+          {/* ── กลุ่ม ── */}
           <div className={`section ${isGroupsOpen ? 'is-open' : ''}`}>
-            <div
-              className="section-header-clickable"
-              onClick={() => setIsGroupsOpen(!isGroupsOpen)}
-            >
-              <span className="section-title">👥 กลุ่ม ({realGroups.length})</span>
-              <span className="chevron">{isGroupsOpen ? '▼' : '▶'}</span>
+            <div className="section-header-clickable" onClick={() => setIsGroupsOpen(v => !v)}>
+              <span className="section-title">
+                กลุ่ม
+                {realGroups.length > 0 && <span className="section-count">{realGroups.length}</span>}
+              </span>
+              <span className="chevron">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"
+                  style={{ transform: isGroupsOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                  <path d="M7 10l5 5 5-5z" />
+                </svg>
+              </span>
             </div>
 
             {isGroupsOpen && (
@@ -168,6 +242,7 @@ export default function Sidebar({
               </div>
             )}
           </div>
+
         </div>
       </aside>
     </>

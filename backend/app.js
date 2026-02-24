@@ -12,7 +12,7 @@ const authRoute = require('./routes/auth');
 const adminRoute = require('./routes/admin');
 const groupsRoute = require('./routes/groups');
 const messagesRoute = require('./routes/messages');
-const attachmentsRoute = require('./routes/attachments');
+
 const datesRoute = require('./routes/dates');
 
 const app = express();
@@ -32,7 +32,7 @@ app.use('/api/auth', authRoute);
 app.use('/api', adminRoute);
 app.use('/api/groups', groupsRoute);
 app.use('/api/messages', messagesRoute);
-app.use('/api/attachments', attachmentsRoute);
+
 app.use('/api/dates', datesRoute);
 
 // ===== Error Handler =====
