@@ -43,6 +43,8 @@ jobs:
           script: |
             cd /home/worker/lineoa-dev
             export IMAGE_TAG=dev
-            docker compose down --remove-orphans
+            docker compose down --remove-orphans || true
+            docker stop lineoa-app 2>/dev/null; docker rm lineoa-app 2>/dev/null; true
+            lsof -ti:3000 | xargs -r kill -9 || true
             docker compose pull
             docker compose up -d
