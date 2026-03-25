@@ -6,6 +6,9 @@ const { Message, User, Group } = require('../models/index');
 const { getProfile, client } = require('../services/lineService');
 const { uploadToGCS, buildGCSPath } = require('../services/gcsService');
 
+const { ensureGroupFolder, uploadFileToDrive } = require('../services/driveService');
+
+
 const lineConfig = {
     channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
     channelSecret: process.env.CHANNEL_SECRET,
@@ -53,17 +56,24 @@ async function handleEvent(event, io) {
     const sourceType = source.type;
 
     // --- GROUP upsert ---
+    let groupName = null;
     if (sourceType === 'group' && groupId) {
         try {
-            const group = await Group.findByPk(groupId);
+            let group = await Group.findByPk(groupId);
             if (!group) {
                 const summary = await client.getGroupSummary(groupId);
                 await Group.upsert({ groupId, groupName: summary.groupName, pictureUrl: summary.pictureUrl });
+                group = { groupName: summary.groupName };
             }
+            groupName = group.groupName;
         } catch (e) {
             console.error('❌ Group Error:', e.message);
         }
     }
+    if (groupName) {
+        ensureGroupFolder(groupName).catch(e => console.error('Drive folder error:', e.message));
+    }
+
 
     if (message.quotedMessageId) {
         console.log(`💬 Reply detected! quotedMessageId: ${message.quotedMessageId}, messageId: ${message.id}, type: ${message.type}`);
@@ -72,7 +82,7 @@ async function handleEvent(event, io) {
     if (message.type === 'image') {
         return await handleImageMessage(event, userId, groupId, sourceType, message, io);
     } else {
-        return await handleNonImageMessage(event, userId, groupId, sourceType, message, io);
+        return await handleNonImageMessage(event, userId, groupId, sourceType, message, io, groupName);
     }
 }
 
@@ -155,7 +165,7 @@ async function saveImageGroup(groupKey, io) {
 }
 
 // ─── Non-image messages ────────────────────────────────────────────────────────
-async function handleNonImageMessage(event, userId, groupId, sourceType, message, io) {
+async function handleNonImageMessage(event, userId, groupId, sourceType, message, io, groupName) {
     try {
         const user = await User.findByPk(userId);
         if (!user) {
@@ -222,10 +232,20 @@ async function handleNonImageMessage(event, userId, groupId, sourceType, message
                 const ext = '.' + (message.fileName.split('.').pop() || 'bin');
                 const gcsPath = buildGCSPath(message.id, ext, 'file');
                 await uploadToGCS(buffer, gcsPath, ext);
+
+                let driveFileId = null;
+                if (groupName) {
+                    const folderId = await ensureGroupFolder(groupName).catch(() => null);
+                    if (folderId) {
+                        driveFileId = await uploadFileToDrive(buffer, message.fileName || `${message.id}${ext}`, 'application/octet-stream', folderId).catch(() => null);
+                    }
+                }
+
                 dbPayload.metadata = {
                     gcsPath,
                     fileName: message.fileName,
-                    fileSize: message.fileSize ?? buffer.length
+                    fileSize: message.fileSize ?? buffer.length,
+                    ...(driveFileId && { driveFileId })
                 };
             } catch (e) {
                 console.error('❌ File upload fail:', e.message);
@@ -233,6 +253,7 @@ async function handleNonImageMessage(event, userId, groupId, sourceType, message
             }
             break;
         }
+
 
         case 'location':
             dbPayload.metadata = {

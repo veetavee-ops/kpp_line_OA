@@ -425,6 +425,38 @@
   font-style: italic;
 }
 
+/* ─── Sidebar Footer ─────────────────────────────────────────────────────── */
+.sidebar-footer {
+  padding: 12px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-sidebar);
+  flex-shrink: 0;
+}
+
+.btn-drive-sidebar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: linear-gradient(135deg, #06C755 0%, #04a846 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Kanit', sans-serif;
+  box-shadow: 0 2px 8px rgba(6, 199, 85, 0.35);
+}
+
+.btn-drive-sidebar:hover {
+  box-shadow: 0 4px 12px rgba(6, 199, 85, 0.45);
+  transform: translateY(-1px);
+}
+
 /* ─── Overlay (mobile) ───────────────────────────────────────────────────── */
 .sidebar-overlay {
   display: none;

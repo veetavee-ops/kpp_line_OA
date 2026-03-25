@@ -109,4 +109,39 @@ router.post('/summarize-day', async (req, res) => {
   }
 });
 
+// GET /api/messages/drive-files
+router.get('/drive-files', async (req, res) => {
+  try {
+    const where = { messageType: 'file' };
+    if (req.query.groupId) where.groupId = req.query.groupId;
+
+    const messages = await Message.findAll({
+      where,
+      include: [
+        { model: User, as: 'user', attributes: ['displayName'] },
+        { model: Group, as: 'group', attributes: ['groupName', 'groupId'] },
+      ],
+      order: [['timestamp', 'DESC']],
+    });
+
+    const files = messages
+      .filter(m => m.metadata?.driveFileId)
+      .map(m => ({
+        id: m.id,
+        fileName: m.metadata.fileName,
+        fileSize: m.metadata.fileSize,
+        driveUrl: `https://drive.google.com/file/d/${m.metadata.driveFileId}/view`,
+        groupName: m.group?.groupName,
+        groupId: m.groupId,
+        uploadedBy: m.user?.displayName,
+        timestamp: m.timestamp,
+      }));
+
+    res.json(files);
+  } catch (error) {
+    console.error('[ERROR] GET /api/messages/drive-files:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

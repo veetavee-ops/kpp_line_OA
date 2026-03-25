@@ -1,0 +1,153 @@
+.drive-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg-app);
+  font-family: 'Kanit', sans-serif;
+}
+
+.back-btn {
+  display: flex !important;
+  color: white;
+}
+
+.header-right-spacer {
+  min-width: 40px;
+}
+
+.drive-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  gap: 16px;
+}
+
+.drive-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.drive-group-select {
+  padding: 7px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: white;
+  cursor: pointer;
+  outline: none;
+}
+
+.drive-group-select:focus {
+  border-color: var(--primary-color);
+}
+
+.drive-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.drive-table-wrap {
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  overflow: auto;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.drive-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.drive-table thead tr {
+  background: #f8fdf9;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+}
+
+.drive-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.drive-table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid #f5f5f5;
+  color: var(--text-primary);
+}
+
+.drive-table tbody tr:hover {
+  background: #f8fdf9;
+}
+
+.drive-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.file-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.cell-muted {
+  color: var(--text-secondary) !important;
+  font-size: 13px;
+}
+
+.cell-center {
+  text-align: center;
+}
+
+.drive-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(6, 199, 85, 0.3);
+  transition: all 0.15s;
+}
+
+.drive-link:hover {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.drive-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+@media screen and (max-width: 768px) {
+  .drive-body {
+    padding: 12px;
+  }
+
+  .drive-table th:nth-child(3),
+  .drive-table td:nth-child(3),
+  .drive-table th:nth-child(4),
+  .drive-table td:nth-child(4) {
+    display: none;
+  }
+}

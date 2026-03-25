@@ -1,95 +1,113 @@
-import { useState, useEffect, useCallback } from 'react'
-import { format } from 'date-fns'
-import { checkAuth, logout } from './api/auth'
-import { useGroups, useMessages } from './hooks/useMessages'
-import { useSocket } from './hooks/useSocket'
-import { summarizeDay } from './api/messages'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage' // 🔒 Hidden page
-import Sidebar from './components/Sidebar/Sidebar'
-import ChatWindow from './components/ChatWindow/ChatWindow'
-import SummaryModal from './components/SummaryModal/SummaryModal'
-import './App.css'
+import { useState, useEffect, useCallback } from "react";
+import { format } from "date-fns";
+import { checkAuth, logout } from "./api/auth";
+import { useGroups, useMessages } from "./hooks/useMessages";
+import { useSocket } from "./hooks/useSocket";
+import { summarizeDay } from "./api/messages";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage"; // 🔒 Hidden page
+import DriveFilesPage from "./pages/DriveFilesPage";
+import Sidebar from "./components/Sidebar/Sidebar";
+import ChatWindow from "./components/ChatWindow/ChatWindow";
+import SummaryModal from "./components/SummaryModal/SummaryModal";
+import "./App.css";
 
 export default function App() {
   // ✅ ALL hooks must be declared unconditionally before any early returns
-  const [admin, setAdmin] = useState(null)
-  const [authLoading, setAuthLoading] = useState(true)
+  const [admin, setAdmin] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const [selectedDate, setSelectedDate] = useState(today)
-  const [selectedGroup, setSelectedGroup] = useState(null)
-  const [search, setSearch] = useState('')
-  const [refreshKey, setRefreshKey] = useState(0)
-  const [dateRange, setDateRange] = useState({ rangeValue: 7, rangeUnit: 'day' })
+  const today = format(new Date(), "yyyy-MM-dd");
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [search, setSearch] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [dateRange, setDateRange] = useState({
+    rangeValue: 7,
+    rangeUnit: "day",
+  });
 
-  const [showDaySummary, setShowDaySummary] = useState(false)
-  const [daySummary, setDaySummary] = useState(null)
-  const [summaryLoading, setSummaryLoading] = useState(false)
-  const [summaryError, setSummaryError] = useState(null)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [showDaySummary, setShowDaySummary] = useState(false);
+  const [daySummary, setDaySummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const { groups, loading: groupsLoading } = useGroups(refreshKey)
-  const { messages, loading: msgsLoading, hasMore, loadingMore, loadMore, addMessage } = useMessages(selectedGroup)
+  const { groups, loading: groupsLoading } = useGroups(refreshKey);
+  const {
+    messages,
+    loading: msgsLoading,
+    hasMore,
+    loadingMore,
+    loadMore,
+    addMessage,
+  } = useMessages(selectedGroup);
 
-  const handleNewMessage = useCallback((newMessage) => {
-    // Group: use groupId directly. Private: match the "private_name_" format from groups API
-    const msgGroupId = newMessage.groupId
-      ? newMessage.groupId
-      : `private_name_${newMessage.user?.displayName}`
+  const handleNewMessage = useCallback(
+    (newMessage) => {
+      // Group: use groupId directly. Private: match the "private_name_" format from groups API
+      const msgGroupId = newMessage.groupId
+        ? newMessage.groupId
+        : `private_name_${newMessage.user?.displayName}`;
 
-    // 1. If looking at this group, add message to chat window
-    if (msgGroupId === selectedGroup) {
-      addMessage(newMessage)
-    }
+      // 1. If looking at this group, add message to chat window
+      if (msgGroupId === selectedGroup) {
+        addMessage(newMessage);
+      }
 
-    // 2. Always refresh sidebar (to show new group or update "last message")
-    setRefreshKey(prev => prev + 1)
-  }, [addMessage, selectedGroup])
+      // 2. Always refresh sidebar (to show new group or update "last message")
+      setRefreshKey((prev) => prev + 1);
+    },
+    [addMessage, selectedGroup],
+  );
 
-  useSocket(selectedGroup, handleNewMessage)
+  useSocket(selectedGroup, handleNewMessage);
 
   useEffect(() => {
     checkAuth()
-      .then(admin => {
-        setAdmin(admin)
+      .then((admin) => {
+        setAdmin(admin);
       })
       .catch(() => {
-        setAdmin(null)
+        setAdmin(null);
       })
       .finally(() => {
-        setAuthLoading(false)
-      })
-  }, [])
+        setAuthLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
-    const groupsList = Array.isArray(groups) ? groups : []
+    const groupsList = Array.isArray(groups) ? groups : [];
     if (!selectedGroup && groupsList.length > 0 && !groupsLoading) {
-      setSelectedGroup(groupsList[0].groupId)
+      setSelectedGroup(groupsList[0].groupId);
     }
-  }, [groups, groupsLoading, selectedGroup])
+  }, [groups, groupsLoading, selectedGroup]);
 
   // 🔒 Check for hidden registration route (Simple Router) — AFTER all hooks
-  if (window.location.pathname === '/register-admin') {
-    return <RegisterPage />
+  if (window.location.pathname === "/register-admin") {
+    return <RegisterPage />;
+  }
+
+  if (window.location.pathname === "/drive-files") {
+    return <DriveFilesPage />;
   }
 
   const handleLogin = (adminData) => {
-    setAdmin(adminData)
-  }
+    setAdmin(adminData);
+  };
 
   const handleLogout = async () => {
-    await logout()
-    setAdmin(null)
-  }
+    await logout();
+    setAdmin(null);
+  };
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(prev => !prev)
-  }
+    setIsSidebarOpen((prev) => !prev);
+  };
 
   const closeSidebar = () => {
-    setIsSidebarOpen(false)
-  }
+    setIsSidebarOpen(false);
+  };
 
   if (authLoading) {
     return (
@@ -97,39 +115,40 @@ export default function App() {
         <div className="spinner"></div>
         <p>Loading...</p>
       </div>
-    )
+    );
   }
 
   if (!admin) {
-    return <LoginPage onLogin={handleLogin} />
+    return <LoginPage onLogin={handleLogin} />;
   }
 
   const handleSummarizeDay = async () => {
-    setShowDaySummary(true)
-    setSummaryLoading(true)
-    setSummaryError(null)
-    setDaySummary(null)
+    setShowDaySummary(true);
+    setSummaryLoading(true);
+    setSummaryError(null);
+    setDaySummary(null);
 
     try {
       const result = await summarizeDay(
         selectedDate,
-        selectedDate === 'all' ? dateRange : null
-      )
-      setDaySummary(result)
+        selectedDate === "all" ? dateRange : null,
+      );
+      setDaySummary(result);
     } catch (error) {
-      setSummaryError(error.message)
+      setSummaryError(error.message);
     } finally {
-      setSummaryLoading(false)
+      setSummaryLoading(false);
     }
-  }
+  };
 
-  const groupsList = Array.isArray(groups) ? groups : []
+  const groupsList = Array.isArray(groups) ? groups : [];
   // Dedup by groupId only — backend already groups by displayName
-  const uniqueGroups = groupsList.filter((g, i, arr) => arr.findIndex(x => x.groupId === g.groupId) === i)
-  const currentGroup = uniqueGroups.find(g => g.groupId === selectedGroup)
-  const privateChats = uniqueGroups.filter(g => g.isPrivate)
-  const realGroups = uniqueGroups.filter(g => !g.isPrivate)
-
+  const uniqueGroups = groupsList.filter(
+    (g, i, arr) => arr.findIndex((x) => x.groupId === g.groupId) === i,
+  );
+  const currentGroup = uniqueGroups.find((g) => g.groupId === selectedGroup);
+  const privateChats = uniqueGroups.filter((g) => g.isPrivate);
+  const realGroups = uniqueGroups.filter((g) => !g.isPrivate);
 
   if (groupsLoading && groupsList.length === 0) {
     return (
@@ -137,14 +156,18 @@ export default function App() {
         <div className="spinner"></div>
         <p>กำลังโหลด...</p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="app">
       <div className="app-header">
         <div className="header-left-controls">
-          <button className="menu-btn" onClick={toggleSidebar} aria-label="เปิดเมนู">
+          <button
+            className="menu-btn"
+            onClick={toggleSidebar}
+            aria-label="เปิดเมนู"
+          >
             <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
               <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
             </svg>
@@ -165,6 +188,12 @@ export default function App() {
             </svg>
             <span>{admin.username}</span>
           </div>
+          {/* <button onClick={() => window.location.href = '/drive-files'} className="btn-drive">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z" />
+            </svg>
+            ไฟล์ Drive
+          </button> */}
           <button onClick={handleLogout} className="btn-logout">
             <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
               <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
@@ -185,8 +214,8 @@ export default function App() {
           realGroups={realGroups}
           onSelectDate={setSelectedDate}
           onSelectGroup={(groupId) => {
-            setSelectedGroup(groupId)
-            closeSidebar() // Close sidebar on selection on mobile
+            setSelectedGroup(groupId);
+            closeSidebar(); // Close sidebar on selection on mobile
           }}
           onSummarizeDay={handleSummarizeDay}
           onRangeChange={setDateRange}
@@ -212,5 +241,5 @@ export default function App() {
         />
       )}
     </div>
-  )
+  );
 }
