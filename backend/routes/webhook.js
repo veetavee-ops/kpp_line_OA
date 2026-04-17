@@ -62,15 +62,13 @@ async function handleEvent(event, io) {
     let groupName = null;
     if (sourceType === 'group' && groupId) {
         try {
-            let group = await Group.findByPk(groupId);
-            if (!group) {
-                const summary = await client.getGroupSummary(groupId);
-                await Group.upsert({ groupId, groupName: summary.groupName, pictureUrl: summary.pictureUrl });
-                group = { groupName: summary.groupName };
-            }
-            groupName = group.groupName;
+            const summary = await client.getGroupSummary(groupId);
+            await Group.upsert({ groupId, groupName: summary.groupName, pictureUrl: summary.pictureUrl });
+            groupName = summary.groupName;
         } catch (e) {
             console.error('❌ Group Error:', e.message);
+            const group = await Group.findByPk(groupId);
+            if (group) groupName = group.groupName;
         }
     }
     if (groupName) {

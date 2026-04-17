@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const { Readable } = require('stream');
+const crypto = require('crypto');
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_DRIVE_CLIENT_ID,
@@ -41,9 +42,26 @@ async function ensureGroupFolder(groupName) {
 
 async function uploadFileToDrive(buffer, fileName, mimeType, folderId) {
     if (!folderId) return null;
+
+    const hash = crypto.createHash('md5').update(buffer).digest('hex');
+
+    // Check if file with same hash already exists in this folder
+    const existing = await drive.files.list({
+        q: `'${folderId}' in parents and appProperties has { key='contentHash' and value='${hash}' } and trashed=false`,
+        fields: 'files(id)',
+        pageSize: 1,
+    });
+    if (existing.data.files.length > 0) {
+        return existing.data.files[0].id;
+    }
+
     const stream = Readable.from(buffer);
     const res = await drive.files.create({
-        requestBody: { name: fileName, parents: [folderId] },
+        requestBody: {
+            name: fileName,
+            parents: [folderId],
+            appProperties: { contentHash: hash },
+        },
         media: { mimeType, body: stream },
         fields: 'id',
     });

@@ -26,6 +26,7 @@ export default function App() {
     rangeValue: 7,
     rangeUnit: "day",
   });
+  const [groupSortBy, setGroupSortBy] = useState("time");
 
   const [showDaySummary, setShowDaySummary] = useState(false);
   const [daySummary, setDaySummary] = useState(null);
@@ -149,9 +150,18 @@ export default function App() {
   );
   const currentGroup = uniqueGroups.find((g) => g.groupId === selectedGroup);
   // const privateChats = uniqueGroups.filter((g) => g.isPrivate);
+  const thCollator = new Intl.Collator("th", { sensitivity: "base", numeric: true });
   const realGroups = uniqueGroups
     .filter((g) => !g.isPrivate)
-    .sort((a, b) => new Date(b.lastMessageTime) - new Date(a.lastMessageTime));
+    .sort((a, b) => {
+      if (groupSortBy === "name")
+        return thCollator.compare(a.groupName || "", b.groupName || "");
+      if (groupSortBy === "name-desc")
+        return thCollator.compare(b.groupName || "", a.groupName || "");
+      if (groupSortBy === "time-asc")
+        return new Date(a.lastMessageTime) - new Date(b.lastMessageTime);
+      return new Date(b.lastMessageTime) - new Date(a.lastMessageTime);
+    });
 
   if (groupsLoading && groupsList.length === 0) {
     return (
@@ -208,6 +218,8 @@ export default function App() {
           selectedDate={selectedDate}
           selectedGroup={selectedGroup}
           realGroups={realGroups}
+          groupSortBy={groupSortBy}
+          onSortChange={setGroupSortBy}
           onSelectDate={setSelectedDate}
           onSelectGroup={(groupId) => {
             setSelectedGroup(groupId);

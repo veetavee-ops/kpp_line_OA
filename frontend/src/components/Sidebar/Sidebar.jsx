@@ -22,6 +22,8 @@ export default function Sidebar({
   selectedDate,
   selectedGroup,
   realGroups,
+  groupSortBy,
+  onSortChange,
   onSelectDate,
   onSelectGroup,
   onSummarizeDay,
@@ -336,6 +338,20 @@ export default function Sidebar({
                 </svg>
               </span>
             </div>
+            {isGroupsOpen && (
+              <div className="group-sort-bar" onClick={(e) => e.stopPropagation()}>
+                <select
+                  className="group-sort-select"
+                  value={groupSortBy}
+                  onChange={(e) => onSortChange(e.target.value)}
+                >
+                  <option value="time">ส่งล่าสุด</option>
+                  <option value="time-asc">ส่งเก่าสุด</option>
+                  <option value="name">ชื่อ ก→ฮ A→Z</option>
+                  <option value="name-desc">ชื่อ ฮ→ก Z→A</option>
+                </select>
+              </div>
+            )}
 
             {isGroupsOpen && (
               <div className="group-list">

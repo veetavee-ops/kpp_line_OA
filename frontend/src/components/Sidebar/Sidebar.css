@@ -390,6 +390,30 @@
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* ─── Group Sort Bar ─────────────────────────────────────────────────────── */
+.group-sort-bar {
+  padding: 4px 8px 3px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.group-sort-select {
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #f7f7f7;
+  color: #666;
+  cursor: pointer;
+  outline: none;
+  width: 50%;
+}
+
+.group-sort-select:hover {
+  border-color: var(--primary-color);
+  color: #333;
+}
+
 /* ─── Group List ─────────────────────────────────────────────────────────── */
 .group-list {
   padding: 2px 8px;
