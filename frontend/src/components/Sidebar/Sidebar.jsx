@@ -22,6 +22,7 @@ export default function Sidebar({
   selectedDate,
   selectedGroup,
   realGroups,
+  privateChats = [],
   groupSortBy,
   onSortChange,
   onSelectDate,
@@ -364,12 +365,13 @@ export default function Sidebar({
                       className={`group-btn ${selectedGroup === g.groupId ? "active" : ""}`}
                       onClick={() => onSelectGroup(g.groupId)}
                     >
-                      <div
-                        className="group-avatar"
-                        style={{ background: getColor(g.groupName) }}
-                      >
-                        {getInitials(g.groupName)}
-                      </div>
+                      {g.pictureUrl ? (
+                        <img className="group-avatar group-avatar--img" src={g.pictureUrl} alt={g.groupName} />
+                      ) : (
+                        <div className="group-avatar" style={{ background: getColor(g.groupName) }}>
+                          {getInitials(g.groupName)}
+                        </div>
+                      )}
                       <span className="group-name">{g.groupName}</span>
                     </button>
                   ))
@@ -377,6 +379,36 @@ export default function Sidebar({
               </div>
             )}
           </div>
+
+          {/* ── แชทส่วนตัว ── */}
+          {privateChats.length > 0 && (
+            <div className="section is-open">
+              <div className="section-header-clickable">
+                <span className="section-title">
+                  ส่วนตัว
+                  <span className="section-count">{privateChats.length}</span>
+                </span>
+              </div>
+              <div className="group-list">
+                {privateChats.map((g) => (
+                  <button
+                    key={g.groupId}
+                    className={`group-btn ${selectedGroup === g.groupId ? "active" : ""}`}
+                    onClick={() => onSelectGroup(g.groupId)}
+                  >
+                    {g.pictureUrl ? (
+                      <img className="group-avatar group-avatar--img" src={g.pictureUrl} alt={g.groupName} />
+                    ) : (
+                      <div className="group-avatar" style={{ background: getColor(g.groupName) }}>
+                        {getInitials(g.groupName)}
+                      </div>
+                    )}
+                    <span className="group-name">{g.groupName}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="sidebar-footer">

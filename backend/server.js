@@ -15,6 +15,7 @@ const sequelize = require('./config/database');
 const corsOptions = require('./config/cors');
 const setupSockets = require('./sockets/index');
 const { startCleanupCron } = require('./services/cleanupService');
+const { alertError, notifyAdmin } = require('./services/notifyService');
 
 
 const server = http.createServer(app);
@@ -35,10 +36,12 @@ sequelize.sync(syncOptions)
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
       startCleanupCron();
+      notifyAdmin('✅ LINE OA Server เริ่มทำงานแล้ว');
     });
   })
   .catch((err) => {
     console.error('Database sync error:', err);
+    alertError('Database', err.message);
     process.exit(1);
   });
 
@@ -49,4 +52,15 @@ process.on('SIGTERM', () => {
     sequelize.close();
     process.exit(0);
   });
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('💥 uncaughtException:', err.message);
+  alertError('Server Crash', err.message);
+});
+
+process.on('unhandledRejection', (reason) => {
+  const msg = reason instanceof Error ? reason.message : String(reason);
+  console.error('💥 unhandledRejection:', msg);
+  alertError('Unhandled Error', msg);
 });

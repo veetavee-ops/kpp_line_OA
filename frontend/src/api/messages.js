@@ -101,7 +101,9 @@ export async function summarizeDay(date, range = null, groupId = null) {
     if (groupId && groupId !== 'all') {
       body.groupId = groupId
     }
-    const res = await axiosInstance.post('/api/messages/summarize-day', body)
+    const res = await axiosInstance.post('/api/messages/summarize-day', body, {
+      timeout: 120000, // 2 minutes for AI calls
+    })
     return res.data
   } catch (error) {
     console.error('Error summarizing day:', error)

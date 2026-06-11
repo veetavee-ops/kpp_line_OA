@@ -35,8 +35,33 @@ router.get('/', async (req, res) => {
       console.error('[ERROR] Fetching group chats:', error.message);
     }
 
-    // res.json([...privateChats, ...groupChats]);
-    res.json([...groupChats]);
+    // Fetch private chats (groupId IS NULL, group by userId)
+    let privateChats = [];
+    try {
+      const privateMessages = await Message.findAll({
+        where: { groupId: null },
+        attributes: [
+          'userId',
+          [sequelize.fn('MAX', sequelize.col('Message.timestamp')), 'lastMessageTime'],
+        ],
+        include: [{ model: User, as: 'user', attributes: ['displayName', 'pictureUrl'] }],
+        group: ['Message.userId', 'user.userId'],
+        order: [[sequelize.fn('MAX', sequelize.col('Message.timestamp')), 'DESC']],
+      });
+
+      privateChats = privateMessages.map((m) => ({
+        groupId: `private_${m.userId}`,
+        groupName: m.user?.displayName || 'Unknown',
+        pictureUrl: m.user?.pictureUrl,
+        isPrivate: true,
+        userId: m.userId,
+        lastMessageTime: m.dataValues.lastMessageTime,
+      }));
+    } catch (error) {
+      console.error('[ERROR] Fetching private chats:', error.message);
+    }
+
+    res.json([...groupChats, ...privateChats]);
   } catch (error) {
     console.error('[ERROR] GET /api/groups:', error);
     res.status(500).json({ error: error.message });

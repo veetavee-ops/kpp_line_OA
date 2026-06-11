@@ -7,6 +7,7 @@ const { getProfile, client } = require('../services/lineService');
 const { uploadToGCS, buildGCSPath, getSignedUrlLong } = require('../services/gcsService');
 
 const { ensureGroupFolder, uploadFileToDrive } = require('../services/driveService');
+const { alertError } = require('../services/notifyService');
 
 
 const lineConfig = {
@@ -53,13 +54,13 @@ async function handleEvent(event, io) {
     const { source, message } = event;
     const sourceType = source.type;
 
-    if (sourceType === 'user') return; // ไม่บันทึก private chat
-
     const userId = source.userId;
     const groupId = source.groupId || null;
 
     // --- GROUP upsert ---
     let groupName = null;
+    let folderName = null;
+
     if (sourceType === 'group' && groupId) {
         try {
             const summary = await client.getGroupSummary(groupId);
@@ -70,16 +71,30 @@ async function handleEvent(event, io) {
             const group = await Group.findByPk(groupId);
             if (group) groupName = group.groupName;
         }
+        if (groupName) folderName = groupName;
+    } else if (sourceType === 'user') {
+        try {
+            let user = await User.findByPk(userId);
+            if (!user) {
+                const profile = await getProfile(event.source);
+                await User.upsert({ userId, displayName: profile.displayName, pictureUrl: profile.pictureUrl });
+                user = { displayName: profile.displayName };
+            }
+            if (user?.displayName) folderName = user.displayName;
+        } catch (e) {
+            console.error('❌ Personal folder error:', e.message);
+        }
     }
-    if (groupName) {
-        ensureGroupFolder(groupName).catch(e => console.error('Drive folder error:', e.message));
+
+    if (folderName) {
+        ensureGroupFolder(folderName).catch(e => console.error('Drive folder error:', e.message));
     }
 
 
     if (message.type === 'image') {
         return await handleImageMessage(event, userId, groupId, sourceType, message, io);
     } else {
-        return await handleNonImageMessage(event, userId, groupId, sourceType, message, io, groupName);
+        return await handleNonImageMessage(event, userId, groupId, sourceType, message, io, folderName);
     }
 }
 
@@ -158,14 +173,25 @@ async function saveImageGroup(groupKey, io) {
 
         io.emit('new-message', fullMessage);
     } catch (err) {
-        console.error('❌ บันทึก image group ล้มเหลว:', err.message);
+        console.error('❌ GCS upload failed:', err.message);
+        alertError('GCS', err.message);
+        // still emit message without image URL
+        try {
+            const fullMessage = await Message.findByPk(pending.messageId, {
+                include: [
+                    { model: User, as: 'user', attributes: ['displayName', 'pictureUrl'] },
+                    { model: Group, as: 'group', attributes: ['groupName', 'pictureUrl'] },
+                ]
+            });
+            if (fullMessage) io.emit('new-message', fullMessage);
+        } catch (e) {}
     } finally {
         pendingImageGroups.delete(groupKey);
     }
 }
 
 // ─── Non-image messages ────────────────────────────────────────────────────────
-async function handleNonImageMessage(event, userId, groupId, sourceType, message, io, groupName) {
+async function handleNonImageMessage(event, userId, groupId, sourceType, message, io, folderName) {
     try {
         const user = await User.findByPk(userId);
         if (!user) {
@@ -205,6 +231,7 @@ async function handleNonImageMessage(event, userId, groupId, sourceType, message
                 };
             } catch (e) {
                 console.error('❌ Video upload fail:', e.message);
+                alertError('GCS Video', e.message);
                 dbPayload.metadata = { duration: message.duration };
             }
             break;
@@ -223,6 +250,7 @@ async function handleNonImageMessage(event, userId, groupId, sourceType, message
                 };
             } catch (e) {
                 console.error('❌ Audio upload fail:', e.message);
+                alertError('GCS Audio', e.message);
                 dbPayload.metadata = { duration: message.duration };
             }
             break;
@@ -237,8 +265,8 @@ async function handleNonImageMessage(event, userId, groupId, sourceType, message
                 const { url: gcsUrl } = await getSignedUrlLong(gcsPath);
 
                 let driveFileId = null;
-                if (groupName) {
-                    const folderId = await ensureGroupFolder(groupName).catch(() => null);
+                if (folderName) {
+                    const folderId = await ensureGroupFolder(folderName).catch(() => null);
                     if (folderId) {
                         driveFileId = await uploadFileToDrive(buffer, message.fileName || `${message.id}${ext}`, 'application/octet-stream', folderId).catch(() => null);
                     }

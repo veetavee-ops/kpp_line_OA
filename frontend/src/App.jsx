@@ -149,7 +149,7 @@ export default function App() {
     (g, i, arr) => arr.findIndex((x) => x.groupId === g.groupId) === i,
   );
   const currentGroup = uniqueGroups.find((g) => g.groupId === selectedGroup);
-  // const privateChats = uniqueGroups.filter((g) => g.isPrivate);
+  const privateChats = uniqueGroups.filter((g) => g.isPrivate);
   const thCollator = new Intl.Collator("th", { sensitivity: "base", numeric: true });
   const realGroups = uniqueGroups
     .filter((g) => !g.isPrivate)
@@ -192,7 +192,7 @@ export default function App() {
               <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
             </svg>
           </span>
-          <span className="header-brand-name">Sotus LINE OA</span>
+          <span className="header-brand-name">Boonyarit LINE OA</span>
         </div>
         <div className="user-info">
           <div className="user-chip">
@@ -218,6 +218,7 @@ export default function App() {
           selectedDate={selectedDate}
           selectedGroup={selectedGroup}
           realGroups={realGroups}
+          privateChats={privateChats}
           groupSortBy={groupSortBy}
           onSortChange={setGroupSortBy}
           onSelectDate={setSelectedDate}
