@@ -61,7 +61,7 @@ router.get('/', async (req, res) => {
 // POST /api/messages/summarize-day
 router.post('/summarize-day', async (req, res) => {
   try {
-    const { date, rangeValue, rangeUnit, groupId } = req.body;
+    const { date, rangeValue, rangeUnit, groupId, provider = 'groq' } = req.body;
 
     if (!date) {
       return res.status(400).json({ error: 'date is required' });
@@ -105,7 +105,7 @@ router.post('/summarize-day', async (req, res) => {
       return res.json({ summary: 'ไม่มีข้อความในช่วงนี้', messageCount: 0, groupCount: 0 });
     }
 
-    const result = await summarizeAllChatsForDate(allMessages);
+    const result = await summarizeAllChatsForDate(allMessages, provider);
     res.json(result);
   } catch (error) {
     console.error('[ERROR] POST /api/messages/summarize-day:', error);

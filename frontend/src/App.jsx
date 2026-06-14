@@ -33,6 +33,7 @@ export default function App() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [aiProvider, setAiProvider] = useState('groq');
 
   const { groups, loading: groupsLoading } = useGroups(refreshKey);
   const {
@@ -134,6 +135,7 @@ export default function App() {
         selectedDate,
         selectedDate === "all" ? dateRange : null,
         summarizeGroupId,
+        aiProvider,
       );
       setDaySummary(result);
     } catch (error) {
@@ -175,17 +177,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="app-header">
-        <div className="header-left-controls">
-          <button
-            className="menu-btn"
-            onClick={toggleSidebar}
-            aria-label="เปิดเมนู"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-              <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-            </svg>
-          </button>
-        </div>
+        <div className="header-left-controls"></div>
         <div className="header-brand">
           <span className="header-brand-icon">
             <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
@@ -207,28 +199,19 @@ export default function App() {
             </svg>
             <span>ออกจากระบบ</span>
           </button>
+          <button
+            className="menu-btn"
+            onClick={toggleSidebar}
+            aria-label="เปิดเมนู"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+              <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+            </svg>
+          </button>
         </div>
       </div>
 
       <div className="app-body">
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onClose={closeSidebar}
-          refreshKey={refreshKey} // ✅ Pass refreshKey for real-time updates
-          selectedDate={selectedDate}
-          selectedGroup={selectedGroup}
-          realGroups={realGroups}
-          privateChats={privateChats}
-          groupSortBy={groupSortBy}
-          onSortChange={setGroupSortBy}
-          onSelectDate={setSelectedDate}
-          onSelectGroup={(groupId) => {
-            setSelectedGroup(groupId);
-            closeSidebar(); // Close sidebar on selection on mobile
-          }}
-          onSummarizeDay={handleSummarizeDay}
-          onRangeChange={setDateRange}
-        />
         <ChatWindow
           currentGroup={currentGroup}
           messages={messages}
@@ -238,6 +221,26 @@ export default function App() {
           onLoadMore={loadMore}
           search={search}
           onSearchChange={setSearch}
+        />
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={closeSidebar}
+          refreshKey={refreshKey}
+          selectedDate={selectedDate}
+          selectedGroup={selectedGroup}
+          realGroups={realGroups}
+          privateChats={privateChats}
+          groupSortBy={groupSortBy}
+          onSortChange={setGroupSortBy}
+          onSelectDate={setSelectedDate}
+          onSelectGroup={(groupId) => {
+            setSelectedGroup(groupId);
+            closeSidebar();
+          }}
+          onSummarizeDay={handleSummarizeDay}
+          onRangeChange={setDateRange}
+          aiProvider={aiProvider}
+          onAiProviderChange={setAiProvider}
         />
       </div>
 

@@ -172,22 +172,19 @@ export default function SummaryModal({ summary, onClose, loading, error }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="modal-header-content">
-            <div className="modal-title-icon">🤖</div>
-            <div>
-              <h2 className="modal-title">
-                {summary?.dayCount > 1
-                  ? `สรุปบทสนทนา ${summary.dayCount} วัน`
-                  : 'สรุปบทสนทนาทั้งวัน'}
-              </h2>
-              {summary && !loading && (
-                <p className="modal-subtitle">
-                  {summary.dateRange
-                    ? summary.dateRange
-                    : `${summary.messageCount} ข้อความจาก ${summary.groupCount} กลุ่ม/แชท`}
-                </p>
-              )}
-            </div>
+          <div>
+            <h2 className="modal-title">
+              {summary?.dayCount > 1
+                ? `สรุปบทสนทนา ${summary.dayCount} วัน`
+                : 'สรุปบทสนทนาทั้งวัน'}
+            </h2>
+            {summary && !loading && (
+              <p className="modal-subtitle">
+                {summary.dateRange
+                  ? summary.dateRange
+                  : `${summary.messageCount} ข้อความจาก ${summary.groupCount} กลุ่ม/แชท`}
+              </p>
+            )}
           </div>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>

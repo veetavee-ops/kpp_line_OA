@@ -23,7 +23,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: sotuseng/lineoa:dev
+          tags: veetavee/lineoa:dev
 
       - name: Copy docker-compose to server
         uses: appleboy/scp-action@v0.1.7

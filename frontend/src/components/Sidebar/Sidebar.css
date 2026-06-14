@@ -4,7 +4,7 @@
   min-width: 200px;
   max-width: 1000px;
   background: var(--bg-sidebar);
-  border-right: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -15,7 +15,7 @@
 
 .sidebar-resize-handle {
   position: absolute;
-  top: 0; right: -3px;
+  top: 0; left: -3px;
   width: 6px; height: 100%;
   cursor: ew-resize;
   z-index: 10;
@@ -198,7 +198,7 @@
 .group-list { padding: 2px 8px; }
 
 .group-btn {
-  width: 100%; padding: 6px 8px 6px 10px;
+  width: 100%; padding: 6px 30px 6px 10px;
   background: transparent; border: none;
   border-left: 3px solid transparent;
   border-radius: 8px; cursor: pointer;
@@ -259,15 +259,185 @@
 }
 .sidebar-overlay.active { display: block; opacity: 1; pointer-events: auto; }
 
+/* ─── Label Tabs ──────────────────────────────────────────────── */
+/* แถวปุ่ม tab แสดงอยู่เหนือ group list */
+.label-tabs-bar {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* ปุ่ม tab แต่ละอัน */
+.label-tab {
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 12px; font-family: 'Kanit', sans-serif;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 5px;
+}
+.label-tab:hover { border-color: rgba(6,199,85,0.35); color: var(--text-primary); }
+
+/* tab ที่ถูกเลือกอยู่ */
+.label-tab--active {
+  background: rgba(6,199,85,0.12);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+/* ปุ่ม + เพิ่ม label */
+.label-tab--add {
+  padding: 3px 9px; font-size: 16px; line-height: 1;
+  color: var(--text-tertiary);
+}
+.label-tab--add:hover { color: var(--primary-color); border-color: rgba(6,199,85,0.35); }
+
+/* wrapper ที่ห่อ tab + ปุ่ม x */
+.label-tab-wrap { position: relative; display: flex; align-items: center; }
+
+/* จุดสีเล็กๆ ใน tab */
+.label-tab-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
+/* ปุ่ม x ลบ label — ติดอยู่ขวาของ tab */
+.label-tab-delete {
+  position: absolute; top: -5px; right: -5px;
+  width: 16px; height: 16px;
+  background: #ef4444; color: white;
+  border: none; border-radius: 50%;
+  font-size: 11px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: transform 0.1s;
+}
+.label-tab-delete:hover { transform: scale(1.15); }
+
+/* ─── New Label Form ───────────────────────────────────────────── */
+/* ฟอร์มสร้าง label ใหม่ */
+.new-label-form {
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex; flex-direction: column; gap: 7px;
+}
+
+/* ช่องพิมพ์ชื่อ label */
+.new-label-input {
+  width: 100%; padding: 6px 10px;
+  border-radius: 8px; border: 1px solid var(--border-color);
+  background: var(--bg-surface); color: var(--text-primary);
+  font-family: 'Kanit', sans-serif; font-size: 13px;
+  outline: none; box-sizing: border-box;
+}
+.new-label-input:focus { border-color: var(--primary-color); }
+
+/* แถวเลือกสี */
+.new-label-colors { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* จุดสีแต่ละสี */
+.color-dot {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid transparent; cursor: pointer; transition: transform 0.1s;
+}
+.color-dot:hover { transform: scale(1.15); }
+/* จุดสีที่เลือกอยู่ — มีขอบขาว */
+.color-dot--selected { border-color: white; transform: scale(1.15); }
+
+/* ปุ่มสร้าง / ยกเลิก */
+.new-label-actions { display: flex; gap: 6px; }
+
+.btn-label-save {
+  flex: 1; padding: 6px;
+  background: var(--primary-color); color: white;
+  border: none; border-radius: 8px;
+  font-family: 'Kanit', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer;
+}
+.btn-label-save:hover { background: #05a846; }
+
+.btn-label-cancel {
+  flex: 1; padding: 6px;
+  background: var(--bg-surface); color: var(--text-secondary);
+  border: 1px solid var(--border-color); border-radius: 8px;
+  font-family: 'Kanit', sans-serif; font-size: 13px;
+  cursor: pointer;
+}
+
+/* ─── Group Label Dots & Tag Button ──────────────────────────── */
+/* wrapper ห่อ group-btn + tag button + dropdown */
+.group-btn-wrap { position: relative; }
+
+/* แถวจุดสีข้างชื่อกลุ่ม (อยู่ใน group-btn) */
+.group-label-dots { display: flex; gap: 3px; align-items: center; flex-shrink: 0; }
+
+/* จุดสีเล็กๆ แสดง label ที่กลุ่มมี */
+.group-label-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+}
+
+/* ปุ่มไอคอน tag — position absolute อยู่มุมขวาของ wrapper
+   ซ่อนปกติ แสดงเมื่อ hover wrapper */
+.btn-label-tag {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  padding: 4px; border: none; background: var(--bg-sidebar);
+  color: var(--text-tertiary); cursor: pointer; border-radius: 4px;
+  display: none; align-items: center; justify-content: center;
+  transition: color 0.15s;
+  z-index: 1;
+}
+.group-btn-wrap:hover .btn-label-tag { display: flex; }
+.btn-label-tag:hover { color: var(--primary-color); }
+
+/* ─── Label Dropdown ──────────────────────────────────────────── */
+/* dropdown เลือก label สำหรับกลุ่ม */
+.label-dropdown {
+  position: absolute; right: 8px; top: 36px; z-index: 200;
+  min-width: 160px;
+  background: #1e2433; border: 1px solid var(--border-color);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  padding: 6px 0; overflow: hidden;
+}
+
+.label-dropdown-title {
+  font-size: 11px; font-weight: 600; color: var(--text-tertiary);
+  padding: 4px 12px 6px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.label-dropdown-empty {
+  font-size: 12px; color: var(--text-tertiary);
+  padding: 4px 12px 8px; font-style: italic;
+}
+
+/* ปุ่มแต่ละ label ใน dropdown */
+.label-dropdown-item {
+  width: 100%; padding: 7px 12px;
+  background: transparent; border: none;
+  color: var(--text-secondary); font-size: 13px; font-family: 'Kanit', sans-serif;
+  cursor: pointer; text-align: left;
+  display: flex; align-items: center; gap: 8px;
+  transition: background 0.1s;
+}
+.label-dropdown-item:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+/* label ที่ assign แล้ว — highlight */
+.label-dropdown-item--on { color: var(--text-primary); font-weight: 600; }
+
+/* จุดสี ใน dropdown */
+.label-dropdown-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* เครื่องหมายถูก */
+.label-dropdown-check { margin-left: auto; color: var(--primary-color); font-size: 13px; }
+
 /* ─── Mobile ──────────────────────────────────────────────────── */
 @media screen and (max-width: 768px) {
   .sidebar {
-    position: fixed; top: 0; left: -280px; height: 100%;
+    position: fixed; top: 0; right: -280px; height: 100%;
     z-index: 101; transition: left 0.3s cubic-bezier(0.4,0,0.2,1);
     width: 280px !important; box-shadow: 4px 0 32px rgba(0,0,0,0.5);
   }
   .sidebar-resize-handle { display: none; }
-  .sidebar.active { left: 0; }
+  .sidebar.active { right: 0; }
   .sidebar-close-btn { display: flex; align-items: center; justify-content: center; margin-left: auto; padding: 0 8px; }
   .logo { width: 100%; }
 }

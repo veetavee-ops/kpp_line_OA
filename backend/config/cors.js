@@ -5,7 +5,6 @@ const corsOptions = {
     //   || 'http://localhost:5173',
     //   'http://localhost:4173',
     //   'http://localhost:3000',
-    //   'https://sotusengineering-lineoa.fly.dev',
     ];
 
     // Allow requests with no origin (e.g. mobile apps, curl)

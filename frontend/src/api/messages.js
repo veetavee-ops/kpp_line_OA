@@ -91,9 +91,9 @@ export function getAttachmentUrl(attachmentId) {
  * Generate AI summary for all messages on a specific date (or 'all' for full range)
  * range: { rangeValue, rangeUnit } — used when date === 'all'
  */
-export async function summarizeDay(date, range = null, groupId = null) {
+export async function summarizeDay(date, range = null, groupId = null, provider = 'groq') {
   try {
-    const body = { date }
+    const body = { date, provider }
     if (range) {
       body.rangeValue = range.rangeValue
       body.rangeUnit = range.rangeUnit

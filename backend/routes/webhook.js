@@ -190,13 +190,26 @@ async function saveImageGroup(groupKey, io) {
     }
 }
 
+// ─── Drive filename helper ─────────────────────────────────────────────────────
+function buildDriveFileName(senderName, timestamp, originalFileName) {
+    const d = new Date(timestamp + 7 * 60 * 60 * 1000); // UTC+7 (Bangkok)
+    const date = `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+    const time = `${String(d.getUTCHours()).padStart(2, '0')}${String(d.getUTCMinutes()).padStart(2, '0')}${String(d.getUTCSeconds()).padStart(2, '0')}`;
+    const safeName = senderName.replace(/[\s/\\:*?"<>|]/g, '_').substring(0, 30);
+    return `${safeName}_${date}_${time}_${originalFileName}`;
+}
+
 // ─── Non-image messages ────────────────────────────────────────────────────────
 async function handleNonImageMessage(event, userId, groupId, sourceType, message, io, folderName) {
+    let senderName = 'unknown';
     try {
-        const user = await User.findByPk(userId);
+        let user = await User.findByPk(userId);
         if (!user) {
             const profile = await getProfile(event.source);
             await User.upsert({ userId, displayName: profile.displayName, pictureUrl: profile.pictureUrl });
+            senderName = profile.displayName || 'unknown';
+        } else {
+            senderName = user.displayName || 'unknown';
         }
     } catch (e) {
         console.error('❌ User Error (in handleNonImageMessage):', e.message);
@@ -268,7 +281,8 @@ async function handleNonImageMessage(event, userId, groupId, sourceType, message
                 if (folderName) {
                     const folderId = await ensureGroupFolder(folderName).catch(() => null);
                     if (folderId) {
-                        driveFileId = await uploadFileToDrive(buffer, message.fileName || `${message.id}${ext}`, 'application/octet-stream', folderId).catch(() => null);
+                        const driveFileName = buildDriveFileName(senderName, event.timestamp, message.fileName || `${message.id}${ext}`);
+                        driveFileId = await uploadFileToDrive(buffer, driveFileName, 'application/octet-stream', folderId).catch(() => null);
                     }
                 }
 

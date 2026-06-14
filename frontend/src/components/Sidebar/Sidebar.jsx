@@ -6,13 +6,25 @@ import {
   getLast7Days,
 } from "../../utils/helpers";
 import { fetchAvailableDates, fetchActiveGroups } from "../../api/messages";
+import { fetchLabels, createLabel, deleteLabel, assignGroup, unassignGroup } from "../../api/labels";
 import "./Sidebar.css";
+
+// สีที่เลือกได้สำหรับ label
+const LABEL_COLORS = [
+  '#ef4444', '#f97316', '#eab308', '#22c55e',
+  '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280',
+];
 
 const RANGE_VALUES = [1, 2, 3, 5, 7, 14, 30, 60, 90];
 const RANGE_UNITS = [
   { value: "day", label: "วัน" },
   { value: "month", label: "เดือน" },
   { value: "year", label: "ปี" },
+];
+
+const AI_PROVIDERS = [
+  { value: 'groq', label: '⚡ Groq — Llama 3.3 70B', sub: 'เร็ว · ฟรี' },
+  { value: 'gemini', label: '✨ Gemini — Flash 2.0', sub: 'Google AI' },
 ];
 
 export default function Sidebar({
@@ -29,11 +41,27 @@ export default function Sidebar({
   onSelectGroup,
   onSummarizeDay,
   onRangeChange,
+  aiProvider = 'groq',
+  onAiProviderChange,
 }) {
   const [dates, setDates] = useState([]);
   const [loadingDates, setLoadingDates] = useState(true);
   const [activeGroups, setActiveGroups] = useState([]);
   const [summarizeGroupId, setSummarizeGroupId] = useState("all");
+
+  // --- Label / Tab state ---
+  // labels: รายการ label ทั้งหมด [{ id, name, color, groupIds }]
+  const [labels, setLabels] = useState([]);
+  // selectedLabel: id ของ tab ที่เลือกอยู่ (null = ทั้งหมด)
+  const [selectedLabel, setSelectedLabel] = useState(null);
+  // openLabelMenu: groupId ของกลุ่มที่เปิด dropdown label อยู่ (null = ปิดทั้งหมด)
+  const [openLabelMenu, setOpenLabelMenu] = useState(null);
+  // showNewLabelForm: แสดงฟอร์มสร้าง label ใหม่ไหม
+  const [showNewLabelForm, setShowNewLabelForm] = useState(false);
+  // newLabelName: ชื่อที่พิมพ์ในฟอร์มสร้าง label ใหม่
+  const [newLabelName, setNewLabelName] = useState('');
+  // newLabelColor: สีที่เลือกในฟอร์มสร้าง label ใหม่
+  const [newLabelColor, setNewLabelColor] = useState('#3b82f6');
 
   // Resize state
   const [sidebarWidth, setSidebarWidth] = useState(280);
@@ -127,6 +155,69 @@ export default function Sidebar({
   useEffect(() => {
     onRangeChange?.({ rangeValue, rangeUnit });
   }, [rangeValue, rangeUnit]);
+
+  // โหลด labels ครั้งแรกที่ sidebar เปิด
+  useEffect(() => {
+    fetchLabels()
+      .then((data) => setLabels(Array.isArray(data) ? data : []))
+      .catch(() => setLabels([]));
+  }, []);
+
+  // สร้าง label ใหม่แล้ว refresh รายการ
+  const handleCreateLabel = async () => {
+    if (!newLabelName.trim()) return;
+    try {
+      const created = await createLabel(newLabelName.trim(), newLabelColor);
+      // เพิ่ม label ใหม่เข้า state โดยตรง ไม่ต้อง fetch ใหม่ทั้งหมด
+      setLabels((prev) => [...prev, created]);
+      setNewLabelName('');
+      setNewLabelColor('#3b82f6');
+      setShowNewLabelForm(false);
+    } catch (err) {
+      console.error('[Label] create failed:', err);
+      alert('สร้าง label ไม่สำเร็จ: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  // ลบ label แล้ว reset tab ถ้าลบ tab ที่เลือกอยู่
+  const handleDeleteLabel = async (labelId) => {
+    await deleteLabel(labelId);
+    setLabels((prev) => prev.filter((l) => l.id !== labelId));
+    if (selectedLabel === labelId) setSelectedLabel(null);
+  };
+
+  // toggle: ถ้ากลุ่มอยู่ใน label แล้วให้เอาออก, ถ้ายังไม่อยู่ให้เพิ่มเข้าไป
+  const handleToggleGroupLabel = async (labelId, groupId) => {
+    const label = labels.find((l) => l.id === labelId);
+    const isAssigned = label?.groupIds.includes(groupId);
+    if (isAssigned) {
+      await unassignGroup(labelId, groupId);
+      // อัปเดต state — เอา groupId ออกจาก label นั้น
+      setLabels((prev) =>
+        prev.map((l) =>
+          l.id === labelId
+            ? { ...l, groupIds: l.groupIds.filter((id) => id !== groupId) }
+            : l
+        )
+      );
+    } else {
+      await assignGroup(labelId, groupId);
+      // อัปเดต state — เพิ่ม groupId เข้า label นั้น
+      setLabels((prev) =>
+        prev.map((l) =>
+          l.id === labelId ? { ...l, groupIds: [...l.groupIds, groupId] } : l
+        )
+      );
+    }
+  };
+
+  // ปิด label dropdown เมื่อคลิกที่อื่นนอก dropdown
+  useEffect(() => {
+    if (openLabelMenu === null) return;
+    const close = () => setOpenLabelMenu(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [openLabelMenu]);
 
   const [isControlsOpen, setIsControlsOpen] = useState(false);
   const [isGroupsOpen, setIsGroupsOpen] = useState(true);
@@ -274,6 +365,27 @@ export default function Sidebar({
                 </select>
               </div>
 
+              {/* ── AI Provider selector ── */}
+              <div className="date-select-wrapper">
+                <label className="input-label">
+                  <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
+                  </svg>
+                  AI ที่ใช้สรุป
+                </label>
+                <select
+                  className="date-dropdown"
+                  value={aiProvider}
+                  onChange={(e) => onAiProviderChange?.(e.target.value)}
+                >
+                  {AI_PROVIDERS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label} ({p.sub})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <button
                 className="btn-summarize-day"
                 onClick={() => onSummarizeDay(summarizeGroupId)}
@@ -289,7 +401,7 @@ export default function Sidebar({
                 สรุป
               </button>
               <p className="btn-summarize-model">
-                สรุปโดย gemini-3-flash-preview
+                สรุปโดย {AI_PROVIDERS.find(p => p.value === aiProvider)?.label || aiProvider}
               </p>
             </div>
           )}
@@ -311,6 +423,77 @@ export default function Sidebar({
             </div>
             <span className="content-header-count">{realGroups.length}</span>
           </div>
+
+          {/* ── Label Tabs — แถบกรองกลุ่มตาม label ── */}
+          <div className="label-tabs-bar">
+            {/* Tab "ทั้งหมด" */}
+            <button
+              className={`label-tab ${selectedLabel === null ? 'label-tab--active' : ''}`}
+              onClick={() => setSelectedLabel(null)}
+            >
+              ทั้งหมด
+            </button>
+
+            {/* Tab แต่ละ label */}
+            {labels.map((label) => (
+              <div key={label.id} className="label-tab-wrap">
+                <button
+                  className={`label-tab ${selectedLabel === label.id ? 'label-tab--active' : ''}`}
+                  style={selectedLabel === label.id ? { borderColor: label.color, color: label.color } : {}}
+                  onClick={() => setSelectedLabel(label.id)}
+                >
+                  {/* จุดสีแสดง label */}
+                  <span className="label-tab-dot" style={{ background: label.color }} />
+                  {label.name}
+                </button>
+                {/* ปุ่ม x ลบ label — แสดงเมื่อ tab นี้ถูกเลือกอยู่ */}
+                {selectedLabel === label.id && (
+                  <button
+                    className="label-tab-delete"
+                    onClick={() => handleDeleteLabel(label.id)}
+                    title="ลบ label นี้"
+                  >×</button>
+                )}
+              </div>
+            ))}
+
+            {/* ปุ่ม + เพิ่ม label ใหม่ */}
+            <button
+              className="label-tab label-tab--add"
+              onClick={() => setShowNewLabelForm((v) => !v)}
+              title="เพิ่ม label"
+            >+</button>
+          </div>
+
+          {/* ── ฟอร์มสร้าง label ใหม่ (แสดงเมื่อกด +) ── */}
+          {showNewLabelForm && (
+            <div className="new-label-form">
+              {/* ช่องพิมพ์ชื่อ */}
+              <input
+                className="new-label-input"
+                placeholder="ชื่อ label..."
+                value={newLabelName}
+                onChange={(e) => setNewLabelName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateLabel()}
+                autoFocus
+              />
+              {/* เลือกสี */}
+              <div className="new-label-colors">
+                {LABEL_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    className={`color-dot ${newLabelColor === c ? 'color-dot--selected' : ''}`}
+                    style={{ background: c }}
+                    onClick={() => setNewLabelColor(c)}
+                  />
+                ))}
+              </div>
+              <div className="new-label-actions">
+                <button className="btn-label-save" onClick={handleCreateLabel}>สร้าง</button>
+                <button className="btn-label-cancel" onClick={() => setShowNewLabelForm(false)}>ยกเลิก</button>
+              </div>
+            </div>
+          )}
 
           {/* ── กลุ่ม ── */}
           <div className={`section ${isGroupsOpen ? "is-open" : ""}`}>
@@ -356,26 +539,91 @@ export default function Sidebar({
 
             {isGroupsOpen && (
               <div className="group-list">
-                {realGroups.length === 0 ? (
-                  <div className="empty-groups">ยังไม่มีกลุ่ม</div>
-                ) : (
-                  realGroups.map((g) => (
-                    <button
-                      key={g.groupId}
-                      className={`group-btn ${selectedGroup === g.groupId ? "active" : ""}`}
-                      onClick={() => onSelectGroup(g.groupId)}
-                    >
-                      {g.pictureUrl ? (
-                        <img className="group-avatar group-avatar--img" src={g.pictureUrl} alt={g.groupName} />
-                      ) : (
-                        <div className="group-avatar" style={{ background: getColor(g.groupName) }}>
-                          {getInitials(g.groupName)}
+                {/* กรองกลุ่มตาม label ที่เลือก (ถ้า selectedLabel = null = ทั้งหมด) */}
+                {(() => {
+                  const filtered = selectedLabel === null
+                    ? realGroups
+                    : realGroups.filter((g) =>
+                        labels.find((l) => l.id === selectedLabel)?.groupIds.includes(g.groupId)
+                      );
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="empty-groups">
+                        {selectedLabel === null ? 'ยังไม่มีกลุ่ม' : 'ยังไม่มีกลุ่มใน label นี้'}
+                      </div>
+                    );
+                  }
+
+                  return filtered.map((g) => (
+                    <div key={g.groupId} className="group-btn-wrap">
+                      {/* ปุ่มหลักเลือกกลุ่ม — ไม่มีปุ่มซ้อนอยู่ข้างใน */}
+                      <button
+                        className={`group-btn ${selectedGroup === g.groupId ? "active" : ""}`}
+                        onClick={() => onSelectGroup(g.groupId)}
+                      >
+                        {g.pictureUrl ? (
+                          <img className="group-avatar group-avatar--img" src={g.pictureUrl} alt={g.groupName} />
+                        ) : (
+                          <div className="group-avatar" style={{ background: getColor(g.groupName) }}>
+                            {getInitials(g.groupName)}
+                          </div>
+                        )}
+                        <span className="group-name">{g.groupName}</span>
+                        {/* จุดสีแสดง label ที่กลุ่มนี้มี */}
+                        <span className="group-label-dots">
+                          {labels
+                            .filter((l) => l.groupIds.includes(g.groupId))
+                            .map((l) => (
+                              <span key={l.id} className="group-label-dot" style={{ background: l.color }} title={l.name} />
+                            ))}
+                        </span>
+                      </button>
+
+                      {/* ปุ่มไอคอน tag — อยู่นอก group-btn เป็น sibling, position absolute */}
+                      <button
+                        className="btn-label-tag"
+                        title="จัดการ label"
+                        onClick={(e) => {
+                          e.stopPropagation(); // ป้องกัน document listener ปิดก่อน toggle ทำงาน
+                          setOpenLabelMenu((prev) => prev === g.groupId ? null : g.groupId);
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                          <path d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z" />
+                        </svg>
+                      </button>
+
+                      {/* Dropdown เลือก label สำหรับกลุ่มนี้ */}
+                      {openLabelMenu === g.groupId && (
+                        <div
+                          className="label-dropdown"
+                          // หยุด event ไม่ให้ขึ้นไปถึง document listener (ไม่งั้นจะปิดเองทันที)
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="label-dropdown-title">เลือก label</div>
+                          {labels.length === 0 && (
+                            <div className="label-dropdown-empty">ยังไม่มี label — กด + เพื่อสร้าง</div>
+                          )}
+                          {labels.map((l) => {
+                            const isOn = l.groupIds.includes(g.groupId);
+                            return (
+                              <button
+                                key={l.id}
+                                className={`label-dropdown-item ${isOn ? 'label-dropdown-item--on' : ''}`}
+                                onClick={() => handleToggleGroupLabel(l.id, g.groupId)}
+                              >
+                                <span className="label-dropdown-dot" style={{ background: l.color }} />
+                                <span>{l.name}</span>
+                                {isOn && <span className="label-dropdown-check">✓</span>}
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
-                      <span className="group-name">{g.groupName}</span>
-                    </button>
-                  ))
-                )}
+                    </div>
+                  ));
+                })()}
               </div>
             )}
           </div>

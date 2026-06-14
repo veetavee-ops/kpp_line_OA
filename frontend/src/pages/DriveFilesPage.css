@@ -36,7 +36,7 @@
   border-radius: 8px;
   font-family: 'Kanit', sans-serif;
   font-size: 13px;
-  color: var(--text-primary);
+  color: #111;
   background: white;
   cursor: pointer;
   outline: none;
@@ -104,7 +104,7 @@
 .drive-table td {
   padding: 11px 16px;
   border-bottom: 1px solid #f5f5f5;
-  color: var(--text-primary);
+  color: #111;
 }
 
 .drive-table tbody tr:hover {
