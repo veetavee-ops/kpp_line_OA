@@ -1,12 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { format } from "date-fns";
 import { checkAuth, logout } from "./api/auth";
 import { useGroups, useMessages } from "./hooks/useMessages";
 import { useSocket } from "./hooks/useSocket";
-import { summarizeDay } from "./api/messages";
+import { summarizeDay, searchMessages } from "./api/messages";
 import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage"; // 🔒 Hidden page
+import RegisterPage from "./pages/RegisterPage";
 import DriveFilesPage from "./pages/DriveFilesPage";
+import DashboardPage from "./pages/DashboardPage";
 import Sidebar from "./components/Sidebar/Sidebar";
 import ChatWindow from "./components/ChatWindow/ChatWindow";
 import SummaryModal from "./components/SummaryModal/SummaryModal";
@@ -21,6 +22,9 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const searchDebounceRef = useRef(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [dateRange, setDateRange] = useState({
     rangeValue: 7,
@@ -33,6 +37,7 @@ export default function App() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [aiProvider, setAiProvider] = useState('groq');
 
   const { groups, loading: groupsLoading } = useGroups(refreshKey);
@@ -64,6 +69,21 @@ export default function App() {
   );
 
   useSocket(selectedGroup, handleNewMessage);
+
+  useEffect(() => {
+    clearTimeout(searchDebounceRef.current);
+    if (search.trim().length < 2) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    searchDebounceRef.current = setTimeout(async () => {
+      const data = await searchMessages(search.trim());
+      setSearchResults(data);
+      setSearching(false);
+    }, 350);
+  }, [search]);
 
   useEffect(() => {
     checkAuth()
@@ -177,7 +197,17 @@ export default function App() {
   return (
     <div className="app">
       <div className="app-header">
-        <div className="header-left-controls"></div>
+        <div className="header-left-controls">
+          <button
+            className={`btn-header-icon${showDashboard ? ' active' : ''}`}
+            onClick={() => setShowDashboard((v) => !v)}
+            title="ภาพรวม"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+              <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+            </svg>
+          </button>
+        </div>
         <div className="header-brand">
           <span className="header-brand-icon">
             <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
@@ -212,16 +242,28 @@ export default function App() {
       </div>
 
       <div className="app-body">
-        <ChatWindow
-          currentGroup={currentGroup}
-          messages={messages}
-          loading={msgsLoading}
-          hasMore={hasMore}
-          loadingMore={loadingMore}
-          onLoadMore={loadMore}
-          search={search}
-          onSearchChange={setSearch}
-        />
+        {showDashboard ? (
+          <DashboardPage
+            onSelectGroup={(groupId) => {
+              setSelectedGroup(groupId);
+              setShowDashboard(false);
+            }}
+          />
+        ) : (
+          <ChatWindow
+            currentGroup={currentGroup}
+            messages={messages}
+            loading={msgsLoading}
+            hasMore={hasMore}
+            loadingMore={loadingMore}
+            onLoadMore={loadMore}
+            search={search}
+            onSearchChange={setSearch}
+            searchResults={searchResults}
+            searching={searching}
+            onSelectGroup={(groupId) => { setSelectedGroup(groupId); setSearch(''); }}
+          />
+        )}
         <Sidebar
           isOpen={isSidebarOpen}
           onClose={closeSidebar}

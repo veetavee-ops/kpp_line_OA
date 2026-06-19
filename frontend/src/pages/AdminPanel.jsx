@@ -1,0 +1,178 @@
+import { useState, useEffect } from 'react';
+import { fetchUsers, createUser, deleteUser, assignGroupToUser, unassignGroupFromUser } from '../api/users';
+import { fetchGroups } from '../api/messages';
+import './AdminPanel.css';
+
+export default function AdminPanel() {
+  const [users, setUsers] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newRole, setNewRole] = useState('user');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([fetchUsers(), fetchGroups()])
+      .then(([u, g]) => {
+        setUsers(Array.isArray(u) ? u : []);
+        setGroups(Array.isArray(g) ? g.filter((x) => !x.isPrivate) : []);
+      })
+      .catch(() => setError('โหลดข้อมูลไม่สำเร็จ'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleCreate = async () => {
+    if (!newUsername.trim() || !newPassword.trim()) return;
+    try {
+      const created = await createUser(newUsername.trim(), newPassword.trim(), newRole);
+      setUsers((prev) => [...prev, created]);
+      setNewUsername('');
+      setNewPassword('');
+      setNewRole('user');
+      setError('');
+    } catch (err) {
+      setError(err.response?.data?.error || 'สร้างไม่สำเร็จ');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('ยืนยันลบผู้ใช้นี้?')) return;
+    try {
+      await deleteUser(id);
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      if (selectedUser?.id === id) setSelectedUser(null);
+    } catch (err) {
+      setError(err.response?.data?.error || 'ลบไม่สำเร็จ');
+    }
+  };
+
+  const handleToggleGroup = async (groupId) => {
+    if (!selectedUser) return;
+    const isOn = selectedUser.groupIds.includes(groupId);
+    try {
+      if (isOn) {
+        await unassignGroupFromUser(selectedUser.id, groupId);
+        const updated = { ...selectedUser, groupIds: selectedUser.groupIds.filter((id) => id !== groupId) };
+        setSelectedUser(updated);
+        setUsers((prev) => prev.map((u) => u.id === selectedUser.id ? updated : u));
+      } else {
+        await assignGroupToUser(selectedUser.id, groupId);
+        const updated = { ...selectedUser, groupIds: [...selectedUser.groupIds, groupId] };
+        setSelectedUser(updated);
+        setUsers((prev) => prev.map((u) => u.id === selectedUser.id ? updated : u));
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'อัปเดตไม่สำเร็จ');
+    }
+  };
+
+  return (
+    <div className="ap-page">
+      <div className="ap-header">
+        <button className="ap-back" onClick={() => (window.location.href = '/')}>← กลับ</button>
+        <h1 className="ap-title">จัดการผู้ใช้</h1>
+      </div>
+
+      {error && <div className="ap-error">{error}</div>}
+
+      <div className="ap-body">
+        {/* ── ฟอร์มสร้าง user ── */}
+        <div className="ap-card">
+          <h2 className="ap-card-title">สร้างผู้ใช้ใหม่</h2>
+          <div className="ap-form-row">
+            <input
+              className="ap-input"
+              placeholder="Username"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+            />
+            <input
+              className="ap-input"
+              placeholder="Password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            <select
+              className="ap-select"
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value)}
+            >
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button className="ap-btn-primary" onClick={handleCreate}>สร้าง</button>
+          </div>
+        </div>
+
+        <div className="ap-columns">
+          {/* ── รายชื่อ user ── */}
+          <div className="ap-card ap-card--list">
+            <h2 className="ap-card-title">ผู้ใช้ทั้งหมด ({users.length})</h2>
+            {loading ? (
+              <p className="ap-empty">กำลังโหลด...</p>
+            ) : users.length === 0 ? (
+              <p className="ap-empty">ยังไม่มีผู้ใช้</p>
+            ) : (
+              <ul className="ap-user-list">
+                {users.map((u) => (
+                  <li
+                    key={u.id}
+                    className={`ap-user-item ${selectedUser?.id === u.id ? 'ap-user-item--active' : ''}`}
+                    onClick={() => setSelectedUser(u)}
+                  >
+                    <div className="ap-user-info">
+                      <span className="ap-username">{u.username}</span>
+                      <span className={`ap-role-badge ap-role-badge--${u.role}`}>{u.role}</span>
+                    </div>
+                    <span className="ap-group-count">{u.groupIds.length} กลุ่ม</span>
+                    <button
+                      className="ap-btn-delete"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(u.id); }}
+                    >ลบ</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* ── assign กลุ่ม ── */}
+          <div className="ap-card ap-card--groups">
+            {selectedUser ? (
+              <>
+                <h2 className="ap-card-title">
+                  กลุ่มของ <span className="ap-highlight">{selectedUser.username}</span>
+                </h2>
+                {selectedUser.role === 'admin' && (
+                  <p className="ap-note">Admin เห็นทุกกลุ่มอยู่แล้ว — ไม่ต้อง assign</p>
+                )}
+                <ul className="ap-group-list">
+                  {groups.map((g) => {
+                    const isOn = selectedUser.groupIds.includes(g.groupId);
+                    return (
+                      <li key={g.groupId} className="ap-group-item">
+                        <label className="ap-group-label">
+                          <input
+                            type="checkbox"
+                            checked={isOn}
+                            onChange={() => handleToggleGroup(g.groupId)}
+                            disabled={selectedUser.role === 'admin'}
+                          />
+                          <span>{g.groupName}</span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            ) : (
+              <p className="ap-empty">เลือกผู้ใช้ทางซ้ายเพื่อ assign กลุ่ม</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

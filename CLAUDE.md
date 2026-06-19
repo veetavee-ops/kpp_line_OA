@@ -5,7 +5,7 @@
 2. `PROJECT_FLOW.md` — map ปุ่ม/คำสั่ง → ไฟล์ที่เกี่ยวข้อง
 
 ## Quick Reference
-- Working dir: `e:\888-DEV PROJECT\mydev_line_oa`
+- Working dir: `e:\888-DEV PROJECT\BOONYARIT`
 - Backend: port 3000 | Frontend: port 5173 | ngrok: `hendrix-vizarded-irina.ngrok-free.dev`
 - Repo: `veetavee-ops/kpp_line_OA` (V1 ห้ามแตะ: `CODEPRO-team/mydev_line_oa`)
 
@@ -19,6 +19,7 @@
 ### สิ่งที่จำเกี่ยวกับโปรเจกต์
 - `PROJECT_HANDOFF.md` = Claude อ่าน (ประหยัด token) | `PROJECT_HANDOFF.html` = คนอ่านใน browser
 - แก้ไฟล์ใดไฟล์หนึ่งต้องแจ้งให้ไปแก้อีกไฟล์ด้วยเสมอ
+- โปรเจกต์อยู่บน **movable/external drive** — drive letter เปลี่ยนตาม PC ที่ต่อ (e:, k:, ฯลฯ) ห้ามสงสัยหรือแก้ path ใน handoff files เพราะ letter ต่างกันเป็นเรื่องปกติ ให้ใช้ working directory จริงตอนนั้นเป็นหลัก
 
 ## Rules
 - แนวทาง: Copy V1 → test run ผ่าน → develop features ใหม่ อย่า rewrite จาก scratch

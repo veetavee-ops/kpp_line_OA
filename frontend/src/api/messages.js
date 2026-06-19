@@ -109,6 +109,26 @@ export async function summarizeDay(date, range = null, groupId = null, provider 
   }
 }
 
+export async function searchMessages(q, limit = 30) {
+  try {
+    const res = await axiosInstance.get('/api/messages/search', { params: { q, limit } })
+    return res.data
+  } catch (error) {
+    console.error('Error searching messages:', error)
+    return []
+  }
+}
+
+export async function fetchDashboardStats() {
+  try {
+    const res = await axiosInstance.get('/api/groups/stats')
+    return res.data
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error)
+    throw new Error(error.response?.data?.error || 'Failed to fetch dashboard stats')
+  }
+}
+
 export async function fetchActiveGroups(date, rangeValue, rangeUnit) {
   try {
     const res = await axiosInstance.get('/api/groups/active', {

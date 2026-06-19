@@ -4,6 +4,36 @@ import MessageBubble from '../MessageBubble/MessageBubble'
 import MediaGallery from '../MediaGallery/MediaGallery'
 import './ChatWindow.css'
 
+function relativeTime(dateStr) {
+  if (!dateStr) return '—';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'เมื่อกี้';
+  if (m < 60) return `${m} นาทีที่แล้ว`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} ชั่วโมงที่แล้ว`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d} วันที่แล้ว`;
+  return new Date(dateStr).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+
+function highlightText(text, q) {
+  if (!q || !text) return text;
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if (idx === -1) return text;
+  const start = Math.max(0, idx - 40);
+  const end = Math.min(text.length, idx + q.length + 60);
+  const snippet = (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
+  const rel = idx - start;
+  return (
+    <>
+      {snippet.slice(0, rel + (start > 0 ? 1 : 0))}
+      <mark className="search-highlight">{snippet.slice(rel + (start > 0 ? 1 : 0), rel + (start > 0 ? 1 : 0) + q.length)}</mark>
+      {snippet.slice(rel + (start > 0 ? 1 : 0) + q.length)}
+    </>
+  );
+}
+
 export default function ChatWindow({
   currentGroup,
   messages,
@@ -12,7 +42,10 @@ export default function ChatWindow({
   loadingMore,
   onLoadMore,
   search,
-  onSearchChange
+  onSearchChange,
+  searchResults,
+  searching,
+  onSelectGroup,
 }) {
   const messagesEndRef = useRef(null)
   const containerRef = useRef(null)
@@ -72,12 +105,8 @@ export default function ChatWindow({
     setShowGallery(false)
   }, [currentGroup])
 
-  const filtered = search
-    ? messages.filter(m =>
-      m.text?.toLowerCase().includes(search.toLowerCase()) ||
-      m.user?.displayName?.toLowerCase().includes(search.toLowerCase())
-    )
-    : messages
+  const isSearching = search.trim().length >= 2
+  const filtered = isSearching ? [] : messages
 
   const stats = {
     total: filtered.length,
@@ -151,6 +180,42 @@ export default function ChatWindow({
 
       {/* ── Main content area ──────────────────────────────── */}
       <div className="chat-body">
+        {isSearching ? (
+          <div className="search-results-panel">
+            {searching ? (
+              <div className="empty"><div className="spinner" /><p>กำลังค้นหา...</p></div>
+            ) : searchResults.length === 0 ? (
+              <div className="empty"><p>ไม่พบ "{search}"</p></div>
+            ) : (
+              <>
+                <div className="search-results-count">พบ {searchResults.length} ข้อความ</div>
+                {searchResults.map((r, i) => (
+                  <div key={r.messageId || i} className="search-result-row" onClick={() => onSelectGroup?.(r.groupId)}>
+                    {r.pictureUrl
+                      ? <img className="search-result-avatar search-result-avatar--img" src={r.pictureUrl} alt={r.groupName} />
+                      : <div className="search-result-avatar" style={{ background: getColor(r.groupName) }}>{getInitials(r.groupName)}</div>
+                    }
+                    <div className="search-result-body">
+                      <div className="search-result-meta">
+                        <span className="search-result-group">{r.groupName}</span>
+                        <span className="search-result-sender">{r.displayName}</span>
+                        <span className="search-result-time">{relativeTime(r.timestamp)}</span>
+                      </div>
+                      <div className="search-result-text">
+                        {r.text
+                          ? highlightText(r.text, search.trim())
+                          : r.metadata?.fileName
+                            ? <span>📎 {highlightText(r.metadata.fileName, search.trim())}</span>
+                            : <span style={{ opacity: 0.5 }}>[ไฟล์/รูป]</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        ) : (
         <div className="messages" ref={containerRef} onScroll={handleScroll}>
           {loading && !loadingMore && (
             <div className="empty">
@@ -212,6 +277,7 @@ export default function ChatWindow({
 
           <div ref={messagesEndRef} />
         </div>
+        )}
 
         {showGallery && (
           <MediaGallery

@@ -148,4 +148,44 @@ router.get('/drive-files', async (req, res) => {
   }
 });
 
+// GET /api/messages/search?q=...&limit=30
+// ค้นใน: text, ชื่อคนส่ง, ชื่อกลุ่ม, ชื่อไฟล์
+router.get('/search', async (req, res) => {
+  try {
+    const { q, limit = 30 } = req.query;
+    if (!q || q.trim().length < 2) return res.json([]);
+
+    const term = `%${q.trim()}%`;
+    const [rows] = await Message.sequelize.query(
+      `SELECT
+         m.message_id   AS "messageId",
+         m.group_id     AS "groupId",
+         m.text,
+         m.timestamp,
+         m.metadata,
+         g.group_name   AS "groupName",
+         g.picture_url  AS "pictureUrl",
+         u.display_name AS "displayName"
+       FROM messages m
+       LEFT JOIN groups g ON m.group_id = g.group_id
+       LEFT JOIN users  u ON m.user_id  = u.user_id
+       WHERE m.group_id IS NOT NULL AND m.group_id <> ''
+         AND (
+           m.text                       ILIKE :term
+           OR u.display_name            ILIKE :term
+           OR g.group_name              ILIKE :term
+           OR m.metadata->>'fileName'   ILIKE :term
+         )
+       ORDER BY m.timestamp DESC
+       LIMIT :limit`,
+      { replacements: { term, limit: parseInt(limit, 10) }, type: 'SELECT' }
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error('[ERROR] GET /api/messages/search:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

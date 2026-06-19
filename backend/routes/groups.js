@@ -115,4 +115,67 @@ router.get('/active', async (req, res) => {
   }
 });
 
+// GET /api/groups/stats — dashboard overview: per-group message counts
+router.get('/stats', async (req, res) => {
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date(todayStart);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const [groupMessages, todayCounts, weekCounts] = await Promise.all([
+      Message.findAll({
+        where: { groupId: { [Op.ne]: null, [Op.ne]: '' } },
+        attributes: [
+          'groupId',
+          [sequelize.fn('MAX', sequelize.col('Message.timestamp')), 'lastMessageTime'],
+        ],
+        include: [{ model: Group, as: 'group', attributes: ['groupName', 'pictureUrl'] }],
+        group: ['Message.groupId', 'group.groupId'],
+        order: [[sequelize.fn('MAX', sequelize.col('Message.timestamp')), 'DESC']],
+      }),
+      Message.findAll({
+        where: {
+          groupId: { [Op.ne]: null, [Op.ne]: '' },
+          timestamp: { [Op.gte]: todayStart },
+        },
+        attributes: ['groupId', [sequelize.fn('COUNT', sequelize.col('Message.id')), 'count']],
+        group: ['groupId'],
+        raw: true,
+      }),
+      Message.findAll({
+        where: {
+          groupId: { [Op.ne]: null, [Op.ne]: '' },
+          timestamp: { [Op.gte]: sevenDaysAgo },
+        },
+        attributes: ['groupId', [sequelize.fn('COUNT', sequelize.col('Message.id')), 'count']],
+        group: ['groupId'],
+        raw: true,
+      }),
+    ]);
+
+    const todayMap = {};
+    todayCounts.forEach((r) => { todayMap[r.groupId] = parseInt(r.count, 10); });
+    const weekMap = {};
+    weekCounts.forEach((r) => { weekMap[r.groupId] = parseInt(r.count, 10); });
+
+    const groups = groupMessages.map((m) => ({
+      groupId: m.groupId,
+      groupName: m.group?.groupName || 'Unknown Group',
+      pictureUrl: m.group?.pictureUrl,
+      lastMessageTime: m.dataValues.lastMessageTime,
+      todayCount: todayMap[m.groupId] || 0,
+      weekCount: weekMap[m.groupId] || 0,
+    }));
+
+    const todayMessages = Object.values(todayMap).reduce((a, b) => a + b, 0);
+    const weekMessages = Object.values(weekMap).reduce((a, b) => a + b, 0);
+
+    res.json({ totalGroups: groups.length, todayMessages, weekMessages, groups });
+  } catch (error) {
+    console.error('[ERROR] GET /api/groups/stats:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
