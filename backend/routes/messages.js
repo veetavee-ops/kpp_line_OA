@@ -156,25 +156,25 @@ router.get('/search', async (req, res) => {
     if (!q || q.trim().length < 2) return res.json([]);
 
     const term = `%${q.trim()}%`;
-    const [rows] = await Message.sequelize.query(
+    const rows = await Message.sequelize.query(
       `SELECT
-         m.message_id   AS "messageId",
-         m.group_id     AS "groupId",
+         m."messageId",
+         m."groupId",
          m.text,
          m.timestamp,
          m.metadata,
-         g.group_name   AS "groupName",
-         g.picture_url  AS "pictureUrl",
-         u.display_name AS "displayName"
+         g."groupName",
+         g."pictureUrl",
+         u."displayName"
        FROM messages m
-       LEFT JOIN groups g ON m.group_id = g.group_id
-       LEFT JOIN users  u ON m.user_id  = u.user_id
-       WHERE m.group_id IS NOT NULL AND m.group_id <> ''
+       LEFT JOIN "Groups" g ON m."groupId" = g."groupId"
+       LEFT JOIN "Users"  u ON m."userId"  = u."userId"
+       WHERE m."groupId" IS NOT NULL AND m."groupId" <> ''
          AND (
-           m.text                       ILIKE :term
-           OR u.display_name            ILIKE :term
-           OR g.group_name              ILIKE :term
-           OR m.metadata->>'fileName'   ILIKE :term
+           m.text                     ILIKE :term
+           OR u."displayName"         ILIKE :term
+           OR g."groupName"           ILIKE :term
+           OR m.metadata->>'fileName' ILIKE :term
          )
        ORDER BY m.timestamp DESC
        LIMIT :limit`,

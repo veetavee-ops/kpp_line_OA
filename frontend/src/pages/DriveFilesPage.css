@@ -46,6 +46,22 @@
   border-color: var(--primary-color);
 }
 
+.drive-search-input {
+  padding: 7px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 14px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  outline: none;
+  min-width: 180px;
+}
+
+.drive-search-input:focus {
+  border-color: var(--primary-color);
+}
+
 .drive-count {
   font-size: 13px;
   color: var(--text-secondary);

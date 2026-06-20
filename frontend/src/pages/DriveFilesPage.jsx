@@ -26,6 +26,7 @@ export default function DriveFilesPage() {
   const [selectedDate, setSelectedDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [driveRootUrl, setDriveRootUrl] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     axios.get(`${API_BASE}/api/groups`, { withCredentials: true })
@@ -59,9 +60,9 @@ export default function DriveFilesPage() {
     }
   }, [availableDates])
 
-  const filteredFiles = selectedDate
-    ? files.filter(f => toDateStr(f.timestamp) === selectedDate)
-    : files
+  const filteredFiles = files
+    .filter(f => !selectedDate || toDateStr(f.timestamp) === selectedDate)
+    .filter(f => !searchQuery.trim() || (f.fileName || '').toLowerCase().includes(searchQuery.trim().toLowerCase()))
 
   return (
     <div className="drive-page">
@@ -108,6 +109,14 @@ export default function DriveFilesPage() {
               <option key={d} value={d}>{formatDateLabel(d)}</option>
             ))}
           </select>
+
+          <input
+            className="drive-search-input"
+            type="text"
+            placeholder="ค้นหาชื่อไฟล์..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
 
           <span className="drive-count">{filteredFiles.length} ไฟล์</span>
 
