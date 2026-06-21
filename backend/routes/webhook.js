@@ -125,6 +125,7 @@ async function handleAdminDM(event) {
 }
 
 async function handleEvent(event, io) {
+    console.log('[Event]', event.type, event.source?.type, event.source?.userId?.slice(0, 10));
     if (event.type !== 'message') return;
 
     const { source, message } = event;
