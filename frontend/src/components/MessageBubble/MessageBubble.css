@@ -109,7 +109,7 @@
   cursor: pointer;
   padding: 2px 3px;
   color: var(--text-tertiary);
-  opacity: 0;
+  opacity: 0.15;
   transition: opacity 0.15s, color 0.15s;
   flex-shrink: 0;
   display: flex;
@@ -117,17 +117,18 @@
   line-height: 1;
 }
 
-.msg:hover .msg-star-btn {
-  opacity: 1;
+.msg-star-btn:hover {
+  opacity: 0.7;
+  color: #f5c518;
 }
 
 .msg-star-btn--active {
   color: #f5c518;
-  opacity: 1 !important;
+  opacity: 1;
 }
 
-.msg-star-btn:hover {
-  color: #f5c518;
+.msg-star-btn--active:hover {
+  opacity: 0.75;
 }
 
 .msg--important {
