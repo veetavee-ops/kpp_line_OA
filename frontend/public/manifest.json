@@ -1,0 +1,11 @@
+{
+  "name": "Boonyarit LINE OA",
+  "short_name": "LINE OA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FF6B00",
+  "theme_color": "#FF6B00",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
