@@ -18,6 +18,7 @@ const datesRoute = require('./routes/dates');
 const mediaRoute = require('./routes/media');   // ← เพิ่ม
 const labelsRoute = require('./routes/labels');
 const usersRoute = require('./routes/users');
+const lineUsersRoute = require('./routes/lineUsers');
 
 
 const app = express();
@@ -66,7 +67,8 @@ app.use('/api/groups', groupsRoute);
 app.use('/api/messages', messagesRoute);
 app.use('/api/dates', datesRoute);
 app.use('/api/labels', labelsRoute);
-app.use('/api/users', usersRoute); // label/tab กรองกลุ่ม
+app.use('/api/users', usersRoute);
+app.use('/api/line-users', lineUsersRoute);
 
 
 // ===== Serve Frontend (SPA) =====

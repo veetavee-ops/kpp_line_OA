@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchUsers, createUser, deleteUser, assignGroupToUser, unassignGroupFromUser } from '../api/users';
 import { fetchGroups } from '../api/messages';
+import { fetchLineUsers, toggleLineUserSearch } from '../api/lineUsers';
 import './AdminPanel.css';
 
 export default function AdminPanel() {
@@ -12,6 +13,8 @@ export default function AdminPanel() {
   const [newRole, setNewRole] = useState('user');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [lineUsers, setLineUsers] = useState([]);
+  const [lineUsersLoading, setLineUsersLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([fetchUsers(), fetchGroups()])
@@ -21,7 +24,23 @@ export default function AdminPanel() {
       })
       .catch(() => setError('โหลดข้อมูลไม่สำเร็จ'))
       .finally(() => setLoading(false));
+
+    fetchLineUsers()
+      .then((data) => setLineUsers(Array.isArray(data) ? data : []))
+      .catch(() => {})
+      .finally(() => setLineUsersLoading(false));
   }, []);
+
+  const handleToggleSearch = async (userId, current) => {
+    try {
+      await toggleLineUserSearch(userId, !current);
+      setLineUsers((prev) =>
+        prev.map((u) => u.userId === userId ? { ...u, canSearch: !current } : u)
+      );
+    } catch (err) {
+      setError('อัปเดตสิทธิ์ไม่สำเร็จ');
+    }
+  };
 
   const handleCreate = async () => {
     if (!newUsername.trim() || !newPassword.trim()) return;
@@ -177,6 +196,39 @@ export default function AdminPanel() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* ── LINE Users: จัดการสิทธิ์ค้นหาผ่าน bot ── */}
+      <div className="ap-card ap-line-users-card">
+        <h2 className="ap-card-title">สิทธิ์ค้นหาไฟล์ผ่าน LINE Bot</h2>
+        <p className="ap-note">เปิดสิทธิ์ให้ user ส่ง "ค้นหา ..." หา bot ใน DM ได้</p>
+        {lineUsersLoading ? (
+          <p className="ap-empty">กำลังโหลด...</p>
+        ) : lineUsers.length === 0 ? (
+          <p className="ap-empty">ยังไม่มี LINE user ในระบบ</p>
+        ) : (
+          <ul className="ap-line-user-list">
+            {lineUsers.map((u) => (
+              <li key={u.userId} className="ap-line-user-item">
+                {u.pictureUrl ? (
+                  <img className="ap-line-avatar ap-line-avatar--img" src={u.pictureUrl} alt={u.displayName} />
+                ) : (
+                  <div className="ap-line-avatar">{(u.displayName || '?')[0]}</div>
+                )}
+                <div className="ap-line-user-info">
+                  <span className="ap-line-name">{u.displayName || '(ไม่มีชื่อ)'}</span>
+                  <span className="ap-line-uid">{u.userId}</span>
+                </div>
+                <button
+                  className={`ap-toggle${u.canSearch ? ' ap-toggle--on' : ''}`}
+                  onClick={() => handleToggleSearch(u.userId, u.canSearch)}
+                >
+                  {u.canSearch ? 'เปิดอยู่' : 'ปิดอยู่'}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

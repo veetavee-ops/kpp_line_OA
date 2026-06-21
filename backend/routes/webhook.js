@@ -49,34 +49,49 @@ router.post('/', webhookMiddleware, async (req, res) => {
 });
 
 
-// ─── Admin DM: ค้นหาไฟล์ด้วยคำสั่ง "ค้นหา <keyword>" ──────────────────────────
-async function handleAdminDM(event) {
+// ─── User DM: ค้นหาไฟล์ใน group ที่ user อยู่ด้วย (เฉพาะ canSearch=true) ────────
+async function handleUserDMSearch(event, userId) {
     const text = (event.message?.text || '').trim();
     const replyToken = event.replyToken;
-    console.log('[AdminDM] received:', JSON.stringify(text));
+    console.log('[UserDM] search from', userId?.slice(0, 10), ':', JSON.stringify(text));
 
-    const SEARCH_PREFIX = /^ค้นหา\s+(.+)/u;
-    const match = text.match(SEARCH_PREFIX);
-
+    const match = text.match(/^ค้นหา\s+(.+)/u);
     if (!match) {
-        // ไม่ใช่คำสั่ง → ส่ง help
-        console.log('[AdminDM] no command match → sending help');
         await client.replyMessage(replyToken, {
             type: 'text',
             text: '🤖 วิธีใช้งาน\n\nพิมพ์: ค้นหา <ชื่อไฟล์>\n\nตัวอย่าง:\n• ค้นหา สัญญา\n• ค้นหา .pdf\n• ค้นหา ใบเสนอราคา\n\nจะแสดงผลสูงสุด 5 รายการล่าสุด'
-        }).catch(e => console.error('[AdminDM] replyMessage error:', e.message));
-        return true; // handled
+        }).catch(e => console.error('[UserDM] replyMessage error:', e.message));
+        return;
     }
 
     const keyword = match[1].trim();
     const safeKeyword = keyword.replace(/'/g, "''");
-    console.log('[AdminDM] searching keyword:', keyword);
+    console.log('[UserDM] keyword:', keyword);
 
     try {
         const { literal } = require('sequelize');
+
+        // หา groupId ที่ user นี้เคยส่งข้อความใน group (แสดงว่าเป็นสมาชิก)
+        const userGroups = await Message.findAll({
+            attributes: ['groupId'],
+            where: { userId, sourceType: 'group', groupId: { [Op.not]: null } },
+            group: ['groupId'],
+            raw: true
+        });
+        const groupIds = userGroups.map(m => m.groupId);
+
+        if (groupIds.length === 0) {
+            await client.replyMessage(replyToken, {
+                type: 'text',
+                text: `🔍 ไม่พบไฟล์ที่ชื่อมี "${keyword}"\n\n(ไม่พบกลุ่มที่คุณเป็นสมาชิก)`
+            }).catch(() => {});
+            return;
+        }
+
         const results = await Message.findAll({
             where: {
                 messageType: 'file',
+                groupId: { [Op.in]: groupIds },
                 [Op.and]: [literal(`(metadata->>'fileName') ILIKE '%${safeKeyword}%'`)]
             },
             include: [
@@ -92,14 +107,14 @@ async function handleAdminDM(event) {
                 type: 'text',
                 text: `🔍 ไม่พบไฟล์ที่ชื่อมี "${keyword}"\n\nลองคำค้นอื่นดูครับ`
             }).catch(() => {});
-            return true;
+            return;
         }
 
         let reply = `🔍 ค้นหา: "${keyword}" — พบ ${results.length} รายการ\n\n`;
         results.forEach((msg, i) => {
             const meta = msg.metadata || {};
             const fileName = meta.fileName || '(ไม่ทราบชื่อ)';
-            const groupName = msg.group?.groupName || 'แชทส่วนตัว';
+            const groupName = msg.group?.groupName || '?';
             const sender = msg.user?.displayName || '?';
             const date = new Date(msg.timestamp).toLocaleDateString('th-TH', {
                 day: 'numeric', month: 'short', year: 'numeric'
@@ -111,17 +126,15 @@ async function handleAdminDM(event) {
             reply += `${i + 1}. ${fileName}\n   📂 ${groupName}  👤 ${sender}\n   📅 ${date}\n   🔗 ${link}\n\n`;
         });
 
-        console.log('[AdminDM] replying with', results.length, 'results');
-        await client.replyMessage(replyToken, { type: 'text', text: reply.trim() }).catch(e => console.error('[AdminDM] replyMessage error:', e.message));
+        console.log('[UserDM] replying with', results.length, 'results');
+        await client.replyMessage(replyToken, { type: 'text', text: reply.trim() }).catch(e => console.error('[UserDM] replyMessage error:', e.message));
     } catch (err) {
         console.error('[DM Search Error]', err.message);
         await client.replyMessage(replyToken, {
             type: 'text',
             text: '❌ เกิดข้อผิดพลาดในการค้นหา กรุณาลองใหม่'
-        }).catch(e => console.error('[AdminDM] replyMessage error:', e.message));
+        }).catch(e => console.error('[UserDM] replyMessage error:', e.message));
     }
-
-    return true;
 }
 
 async function handleEvent(event, io) {
@@ -134,12 +147,15 @@ async function handleEvent(event, io) {
     const userId = source.userId;
     const groupId = source.groupId || null;
 
-    // ── Admin DM: เฉพาะ "ค้นหา <keyword>" เท่านั้น ข้อความอื่นบันทึกปกติ ─────
-    if (sourceType === 'user' && message.type === 'text' && userId === process.env.ADMIN_LINE_USER_ID) {
-        if (/^ค้นหา\s+/u.test((message.text || '').trim())) {
-            await handleAdminDM(event);
+    // ── User DM: ตรวจสิทธิ์ก่อน ถ้า canSearch=true ค้นหาได้ ถ้าไม่มีสิทธิ์ → ignore ─
+    if (sourceType === 'user' && message.type === 'text') {
+        const lineUser = await User.findByPk(userId);
+        if (lineUser?.canSearch) {
+            await handleUserDMSearch(event, userId);
             return;
         }
+        // ไม่มีสิทธิ์ → ignore เงียบๆ ไม่ตอบกลับ ไม่บันทึก
+        return;
     }
 
     // --- GROUP upsert ---
