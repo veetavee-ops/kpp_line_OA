@@ -5,6 +5,7 @@ const Admin = require('./Admin');
 const AdminGroup = require('./AdminGroup');
 const Label = require('./Label');
 const GroupLabel = require('./GroupLabel');
+const Setting = require('./Setting');
 
 // ความสัมพันธ์ระหว่าง Message, User, Group
 Message.belongsTo(User, { foreignKey: 'userId', as: 'user' });
@@ -28,4 +29,5 @@ module.exports = {
   AdminGroup,
   Label,
   GroupLabel,
+  Setting,
 };

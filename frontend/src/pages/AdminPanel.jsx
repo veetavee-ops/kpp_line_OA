@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchUsers, createUser, deleteUser, assignGroupToUser, unassignGroupFromUser } from '../api/users';
 import { fetchGroups } from '../api/messages';
 import { fetchLineUsers, toggleLineUserSearch } from '../api/lineUsers';
+import { fetchSettings, updateSetting } from '../api/settings';
 import './AdminPanel.css';
 
 export default function AdminPanel() {
@@ -15,6 +16,8 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [lineUsers, setLineUsers] = useState([]);
   const [lineUsersLoading, setLineUsersLoading] = useState(true);
+  const [driveEnabled, setDriveEnabled] = useState(true);
+  const [driveToggling, setDriveToggling] = useState(false);
 
   useEffect(() => {
     Promise.all([fetchUsers(), fetchGroups()])
@@ -29,7 +32,24 @@ export default function AdminPanel() {
       .then((data) => setLineUsers(Array.isArray(data) ? data : []))
       .catch(() => {})
       .finally(() => setLineUsersLoading(false));
+
+    fetchSettings()
+      .then((s) => { if (s.drive_enabled !== undefined) setDriveEnabled(s.drive_enabled === 'true'); })
+      .catch(() => {});
   }, []);
+
+  const handleToggleDrive = async () => {
+    setDriveToggling(true);
+    try {
+      const next = !driveEnabled;
+      await updateSetting('drive_enabled', next);
+      setDriveEnabled(next);
+    } catch (err) {
+      setError('อัปเดต Drive setting ไม่สำเร็จ');
+    } finally {
+      setDriveToggling(false);
+    }
+  };
 
   const handleToggleSearch = async (userId, current) => {
     try {
@@ -195,6 +215,24 @@ export default function AdminPanel() {
               <p className="ap-empty">เลือกผู้ใช้ทางซ้ายเพื่อ assign กลุ่ม</p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* ── System Settings ── */}
+      <div className="ap-card ap-settings-card">
+        <h2 className="ap-card-title">ตั้งค่าระบบ</h2>
+        <div className="ap-setting-row">
+          <div className="ap-setting-info">
+            <span className="ap-setting-label">Google Drive Upload</span>
+            <span className="ap-setting-desc">อัปโหลดไฟล์ไปยัง Google Drive ควบคู่กับ GCS (token หมดทุก 7 วัน)</span>
+          </div>
+          <button
+            className={`ap-toggle${driveEnabled ? ' ap-toggle--on' : ''}`}
+            onClick={handleToggleDrive}
+            disabled={driveToggling}
+          >
+            {driveToggling ? '...' : driveEnabled ? 'เปิดอยู่' : 'ปิดอยู่'}
+          </button>
         </div>
       </div>
 

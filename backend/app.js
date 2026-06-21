@@ -19,6 +19,7 @@ const mediaRoute = require('./routes/media');   // ← เพิ่ม
 const labelsRoute = require('./routes/labels');
 const usersRoute = require('./routes/users');
 const lineUsersRoute = require('./routes/lineUsers');
+const settingsRoute = require('./routes/settings');
 
 
 const app = express();
@@ -69,6 +70,7 @@ app.use('/api/dates', datesRoute);
 app.use('/api/labels', labelsRoute);
 app.use('/api/users', usersRoute);
 app.use('/api/line-users', lineUsersRoute);
+app.use('/api/settings', settingsRoute);
 
 
 // ===== Serve Frontend (SPA) =====

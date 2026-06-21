@@ -3,12 +3,17 @@ const router = express.Router();
 const line = require('@line/bot-sdk');
 const { Op } = require('sequelize');
 
-const { Message, User, Group } = require('../models/index');
+const { Message, User, Group, Setting } = require('../models/index');
 const { getProfile, client } = require('../services/lineService');
 const { uploadToGCS, buildGCSPath, getSignedUrlLong } = require('../services/gcsService');
 
 const { ensureGroupFolder, uploadFileToDrive } = require('../services/driveService');
 const { alertError } = require('../services/notifyService');
+
+async function isDriveEnabled() {
+    const s = await Setting.findByPk('drive_enabled');
+    return s ? s.value === 'true' : true; // default เปิดอยู่
+}
 
 
 const lineConfig = {
@@ -188,7 +193,9 @@ async function handleEvent(event, io) {
     }
 
     if (folderName) {
-        ensureGroupFolder(folderName).catch(e => console.error('Drive folder error:', e.message));
+        isDriveEnabled().then(enabled => {
+            if (enabled) ensureGroupFolder(folderName).catch(e => console.error('Drive folder error:', e.message));
+        });
     }
 
 
@@ -396,7 +403,7 @@ async function handleNonImageMessage(event, userId, groupId, sourceType, message
             }
 
             // Drive upload (ล้มเหลวได้ โดยไม่กระทบ DB save)
-            if (folderName) {
+            if (folderName && await isDriveEnabled()) {
                 try {
                     const folderId = await ensureGroupFolder(folderName).catch(() => null);
                     if (folderId) {
