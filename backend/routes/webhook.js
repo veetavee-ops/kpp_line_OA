@@ -134,10 +134,12 @@ async function handleEvent(event, io) {
     const userId = source.userId;
     const groupId = source.groupId || null;
 
-    // ── Admin DM command handler (ไม่บันทึกลง DB) ────────────────────────────
+    // ── Admin DM: เฉพาะ "ค้นหา <keyword>" เท่านั้น ข้อความอื่นบันทึกปกติ ─────
     if (sourceType === 'user' && message.type === 'text' && userId === process.env.ADMIN_LINE_USER_ID) {
-        await handleAdminDM(event);
-        return;
+        if (/^ค้นหา\s+/u.test((message.text || '').trim())) {
+            await handleAdminDM(event);
+            return;
+        }
     }
 
     // --- GROUP upsert ---
