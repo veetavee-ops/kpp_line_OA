@@ -9,7 +9,8 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Stage 2: Production backend + frontend static
-FROM node:22-alpine
+# ใช้ Debian แทน Alpine เพื่อแก้ปัญหา TLS/HTTP กับ Google APIs (v4/token Premature close)
+FROM node:22
 WORKDIR /app
 COPY backend/package*.json ./
 RUN npm ci --omit=dev
