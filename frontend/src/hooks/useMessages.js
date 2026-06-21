@@ -89,7 +89,13 @@ export function useMessages(groupId) {
 
   const addMessage = useCallback((newMessage) => {
     setMessages(prev => {
-      if (prev.find(m => m.id === newMessage.id)) return prev
+      const alreadyExists = prev.find(m => m.id === newMessage.id)
+      console.log('[DEBUG addMessage]', {
+        newId: newMessage.id,
+        prevCount: prev.length,
+        alreadyExists: !!alreadyExists,
+      })
+      if (alreadyExists) return prev
       return [...prev, newMessage]
     })
   }, [])
