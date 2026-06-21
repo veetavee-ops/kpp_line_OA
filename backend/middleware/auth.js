@@ -39,4 +39,12 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
+const requireAdmin = (req, res, next) => {
+  if (!req.admin || !['superuser', 'admin'].includes(req.admin.role)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+};
+
 module.exports = authMiddleware;
+module.exports.requireAdmin = requireAdmin;

@@ -8,6 +8,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import DriveFilesPage from "./pages/DriveFilesPage";
 import DashboardPage from "./pages/DashboardPage";
+import AdminPanel from "./pages/AdminPanel";
 import Sidebar from "./components/Sidebar/Sidebar";
 import ChatWindow from "./components/ChatWindow/ChatWindow";
 import SummaryModal from "./components/SummaryModal/SummaryModal";
@@ -89,6 +90,7 @@ export default function App() {
     checkAuth()
       .then((admin) => {
         setAdmin(admin);
+        setRefreshKey((prev) => prev + 1);
       })
       .catch(() => {
         setAdmin(null);
@@ -142,6 +144,10 @@ export default function App() {
 
   if (!admin) {
     return <LoginPage onLogin={handleLogin} />;
+  }
+
+  if (window.location.pathname === "/admin-panel") {
+    return admin.role === 'superuser' ? <AdminPanel /> : <div style={{padding:'2rem',color:'white'}}>ไม่มีสิทธิ์เข้าถึง</div>;
   }
 
   const handleSummarizeDay = async (summarizeGroupId = null) => {
@@ -217,6 +223,16 @@ export default function App() {
           <span className="header-brand-name">Boonyarit LINE OA</span>
         </div>
         <div className="user-info">
+          {admin.role === 'superuser' && (
+            <button className="btn-header-icon" onClick={() => window.location.href = '/admin-panel'} title="จัดการผู้ใช้">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+              </svg>
+              <svg viewBox="0 0 24 24" fill="currentColor" width="10" height="10" style={{marginLeft:'-4px'}}>
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+              </svg>
+            </button>
+          )}
           <div className="user-chip">
             <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
               <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />

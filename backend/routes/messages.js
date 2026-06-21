@@ -1,9 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { Message, User, Group } = require('../models/index');
+const { Message, User, Group, AdminGroup } = require('../models/index');
 
 const { summarizeAllChatsForDate } = require('../services/aiService');
 const { Op } = require('sequelize');
+const authMiddleware = require('../middleware/auth');
+
+router.use(authMiddleware);
+
+async function getAllowedGroupIds(adminId) {
+  const rows = await AdminGroup.findAll({ where: { adminId }, attributes: ['groupId'] });
+  return rows.map((r) => r.groupId);
+}
 
 // GET /api/messages?groupId=...
 // Returns ALL messages for the selected group/private chat (no date filter)
@@ -119,6 +127,13 @@ router.get('/drive-files', async (req, res) => {
     const where = { messageType: 'file' };
     if (req.query.groupId) where.groupId = req.query.groupId;
 
+    if (req.admin.role === 'user') {
+      const allowed = await getAllowedGroupIds(req.admin.id);
+      where.groupId = req.query.groupId && allowed.includes(req.query.groupId)
+        ? req.query.groupId
+        : { [Op.in]: allowed };
+    }
+
     const messages = await Message.findAll({
       where,
       include: [
@@ -156,6 +171,16 @@ router.get('/search', async (req, res) => {
     if (!q || q.trim().length < 2) return res.json([]);
 
     const term = `%${q.trim()}%`;
+
+    let groupFilter = `m."groupId" IS NOT NULL AND m."groupId" <> ''`;
+    const replacements = { term, limit: parseInt(limit, 10) };
+
+    if (req.admin.role === 'user') {
+      const allowed = await getAllowedGroupIds(req.admin.id);
+      groupFilter += ` AND m."groupId" = ANY(:allowedIds)`;
+      replacements.allowedIds = allowed.length ? allowed : ['__none__'];
+    }
+
     const rows = await Message.sequelize.query(
       `SELECT
          m."messageId",
@@ -169,7 +194,7 @@ router.get('/search', async (req, res) => {
        FROM messages m
        LEFT JOIN "Groups" g ON m."groupId" = g."groupId"
        LEFT JOIN "Users"  u ON m."userId"  = u."userId"
-       WHERE m."groupId" IS NOT NULL AND m."groupId" <> ''
+       WHERE ${groupFilter}
          AND (
            m.text                     ILIKE :term
            OR u."displayName"         ILIKE :term
@@ -178,7 +203,7 @@ router.get('/search', async (req, res) => {
          )
        ORDER BY m.timestamp DESC
        LIMIT :limit`,
-      { replacements: { term, limit: parseInt(limit, 10) }, type: 'SELECT' }
+      { replacements, type: 'SELECT' }
     );
 
     res.json(rows);

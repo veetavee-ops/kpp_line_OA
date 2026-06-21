@@ -4,6 +4,7 @@ router.use('/webhook', require('./webhook'));
 router.use('/api/auth', require('./auth'));
 router.use('/api/groups', require('./groups'));
 router.use('/api/messages', require('./messages'));
+router.use('/api/users', require('./users'));
 router.use('/api/attachments', require('./attachments'));
 router.use('/api/media', require('./media'));   // ← เพิ่มบรรทัดนี้
 router.use('/api', require('./admin'));

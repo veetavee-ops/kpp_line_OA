@@ -53,7 +53,8 @@ router.post('/login', async (req, res) => {
       token,
       admin: {
         id: admin.id,
-        username: admin.username
+        username: admin.username,
+        role: admin.role
       }
     });
   } catch (error) {
@@ -115,7 +116,7 @@ router.get('/me', async (req, res) => {
 
     const decoded = jwt.verify(token, JWT_SECRET);
     const admin = await Admin.findByPk(decoded.id, {
-      attributes: ['id', 'username']
+      attributes: ['id', 'username', 'role']
     });
 
     if (!admin) {

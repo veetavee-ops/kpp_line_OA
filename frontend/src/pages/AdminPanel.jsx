@@ -34,6 +34,9 @@ export default function AdminPanel() {
       setError('');
     } catch (err) {
       setError(err.response?.data?.error || 'สร้างไม่สำเร็จ');
+      setNewUsername('');
+      setNewPassword('');
+      setNewRole('user');
     }
   };
 
@@ -87,6 +90,7 @@ export default function AdminPanel() {
               placeholder="Username"
               value={newUsername}
               onChange={(e) => setNewUsername(e.target.value)}
+              autoComplete="off"
             />
             <input
               className="ap-input"
@@ -94,6 +98,7 @@ export default function AdminPanel() {
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
             />
             <select
               className="ap-select"
@@ -117,7 +122,7 @@ export default function AdminPanel() {
               <p className="ap-empty">ยังไม่มีผู้ใช้</p>
             ) : (
               <ul className="ap-user-list">
-                {users.map((u) => (
+                {users.filter((u) => u.role !== 'superuser').map((u) => (
                   <li
                     key={u.id}
                     className={`ap-user-item ${selectedUser?.id === u.id ? 'ap-user-item--active' : ''}`}

@@ -1,8 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { Message, Group, User } = require('../models/index');
+const { Message, Group, User, AdminGroup } = require('../models/index');
 const sequelize = require('../config/database');
 const { Op } = require('sequelize');
+const authMiddleware = require('../middleware/auth');
+
+router.use(authMiddleware);
+
+async function getAllowedGroupIds(adminId) {
+  const rows = await AdminGroup.findAll({ where: { adminId }, attributes: ['groupId'] });
+  return rows.map((r) => r.groupId);
+}
 
 // GET /api/groups — returns ALL groups/private chats (no date filter)
 router.get('/', async (req, res) => {
@@ -61,6 +69,12 @@ router.get('/', async (req, res) => {
       console.error('[ERROR] Fetching private chats:', error.message);
     }
 
+    if (req.admin.role === 'user') {
+      const allowed = await getAllowedGroupIds(req.admin.id);
+      groupChats = groupChats.filter((g) => allowed.includes(g.groupId));
+      privateChats = [];
+    }
+
     res.json([...groupChats, ...privateChats]);
   } catch (error) {
     console.error('[ERROR] GET /api/groups:', error);
@@ -102,11 +116,16 @@ router.get('/active', async (req, res) => {
       group: ['Message.groupId', 'group.groupId'],
     });
 
-    const activeGroups = groupMessages.map((m) => ({
+    let activeGroups = groupMessages.map((m) => ({
       groupId: m.groupId,
       groupName: m.group?.groupName || 'Unknown Group',
       pictureUrl: m.group?.pictureUrl,
     }));
+
+    if (req.admin.role === 'user') {
+      const allowed = await getAllowedGroupIds(req.admin.id);
+      activeGroups = activeGroups.filter((g) => allowed.includes(g.groupId));
+    }
 
     res.json(activeGroups);
   } catch (error) {
@@ -159,7 +178,7 @@ router.get('/stats', async (req, res) => {
     const weekMap = {};
     weekCounts.forEach((r) => { weekMap[r.groupId] = parseInt(r.count, 10); });
 
-    const groups = groupMessages.map((m) => ({
+    let groups = groupMessages.map((m) => ({
       groupId: m.groupId,
       groupName: m.group?.groupName || 'Unknown Group',
       pictureUrl: m.group?.pictureUrl,
@@ -168,8 +187,13 @@ router.get('/stats', async (req, res) => {
       weekCount: weekMap[m.groupId] || 0,
     }));
 
-    const todayMessages = Object.values(todayMap).reduce((a, b) => a + b, 0);
-    const weekMessages = Object.values(weekMap).reduce((a, b) => a + b, 0);
+    if (req.admin.role === 'user') {
+      const allowed = await getAllowedGroupIds(req.admin.id);
+      groups = groups.filter((g) => allowed.includes(g.groupId));
+    }
+
+    const todayMessages = groups.reduce((a, g) => a + g.todayCount, 0);
+    const weekMessages = groups.reduce((a, g) => a + g.weekCount, 0);
 
     res.json({ totalGroups: groups.length, todayMessages, weekMessages, groups });
   } catch (error) {
