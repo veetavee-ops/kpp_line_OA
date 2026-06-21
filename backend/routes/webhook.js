@@ -355,32 +355,49 @@ async function handleNonImageMessage(event, userId, groupId, sourceType, message
         }
 
         case 'file': {
+            let buffer = null;
             try {
-                const buffer = await downloadAsBuffer(message.id);
-                const ext = '.' + (message.fileName.split('.').pop() || 'bin');
-                const gcsPath = buildGCSPath(message.id, ext, 'file');
-                await uploadToGCS(buffer, gcsPath, ext);
-                const { url: gcsUrl } = await getSignedUrlLong(gcsPath);
+                buffer = await downloadAsBuffer(message.id);
+            } catch (e) {
+                console.error('❌ File download fail:', e.message);
+                dbPayload.metadata = { fileName: message.fileName, fileSize: message.fileSize };
+                break;
+            }
 
-                let driveFileId = null;
-                if (folderName) {
+            const ext = '.' + (message.fileName.split('.').pop() || 'bin');
+            let gcsPath = null, gcsUrl = null;
+            let driveFileId = null;
+
+            // GCS upload (ล้มเหลวได้ โดยไม่กระทบ Drive)
+            try {
+                gcsPath = buildGCSPath(message.id, ext, 'file');
+                await uploadToGCS(buffer, gcsPath, ext);
+                const signed = await getSignedUrlLong(gcsPath);
+                gcsUrl = signed.url;
+            } catch (e) {
+                console.error('❌ File GCS fail:', e.message);
+                alertError('GCS File', e.message);
+            }
+
+            // Drive upload (ล้มเหลวได้ โดยไม่กระทบ DB save)
+            if (folderName) {
+                try {
                     const folderId = await ensureGroupFolder(folderName).catch(() => null);
                     if (folderId) {
                         const driveFileName = buildDriveFileName(senderName, event.timestamp, message.fileName || `${message.id}${ext}`);
                         driveFileId = await uploadFileToDrive(buffer, driveFileName, 'application/octet-stream', folderId).catch(() => null);
                     }
+                } catch (e) {
+                    console.error('❌ File Drive fail:', e.message);
                 }
-
-                dbPayload.metadata = {
-                    gcsPath, gcsUrl, gcsUrlExpires: '2099-12-31T23:59:59Z',
-                    fileName: message.fileName,
-                    fileSize: message.fileSize ?? buffer.length,
-                    ...(driveFileId && { driveFileId })
-                };
-            } catch (e) {
-                console.error('❌ File upload fail:', e.message);
-                dbPayload.metadata = { fileName: message.fileName, fileSize: message.fileSize };
             }
+
+            dbPayload.metadata = {
+                ...(gcsPath && { gcsPath, gcsUrl, gcsUrlExpires: '2099-12-31T23:59:59Z' }),
+                fileName: message.fileName,
+                fileSize: message.fileSize ?? buffer.length,
+                ...(driveFileId && { driveFileId })
+            };
             break;
         }
 
