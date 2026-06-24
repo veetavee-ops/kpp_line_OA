@@ -272,12 +272,19 @@ async function saveImageGroup(groupKey, io) {
         }
 
         for (const img of pending.images) {
-            const gcsPath = buildGCSPath(img.lineMessageId, '.jpg', 'image');
-            await uploadToGCS(img.buffer, gcsPath, '.jpg');
-            gcsPaths.push(gcsPath);
-            const { url } = await getSignedUrlLong(gcsPath);
-            gcsUrls.push(url);
+            // GCS upload (ล้มเหลวได้ โดยไม่กระทบ Drive)
+            try {
+                const gcsPath = buildGCSPath(img.lineMessageId, '.jpg', 'image');
+                await uploadToGCS(img.buffer, gcsPath, '.jpg');
+                gcsPaths.push(gcsPath);
+                const { url } = await getSignedUrlLong(gcsPath);
+                gcsUrls.push(url);
+            } catch (e) {
+                console.error('❌ Image GCS fail:', e.message);
+                alertError('GCS Image', e.message);
+            }
 
+            // Drive upload (ล้มเหลวได้ โดยไม่กระทบ GCS)
             if (folderId) {
                 try {
                     const driveFileName = buildDriveFileName(pending.senderName, img.timestamp.getTime(), `${img.lineMessageId}.jpg`);
