@@ -7,5 +7,7 @@ services:
       - "3000:3000"
     env_file:
       - .env
+    volumes:
+      - /home/worker/lineoa-dev/gcs-key.json:/app/config/gcs-key.json
     environment:
       - NODE_ENV=production
