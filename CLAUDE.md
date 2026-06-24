@@ -78,10 +78,25 @@ Internet → Caddy (port 80/443) → localhost:3000 → Docker container (lineoa
 - ถ้า deploy ไม่มีผล → เช็ค Actions ก่อนเสมอ
 - Ubuntu 24.04 ปิด SSH password auth by default → ต้องแก้ sshd_config.d ก่อน setup ครั้งแรก
 
+### ✅ Session 2 ต่อ — GCS key + Drive token fix
+
+**GCS key:**
+- `gcs-key.json` ไม่ได้อยู่ใน Docker image → ต้อง mount เป็น volume
+- SCP ขึ้น server: `scp backend/config/gcs-key.json root@168.144.137.42:/home/worker/lineoa-dev/gcs-key.json`
+- เพิ่ม volume mount ใน docker-compose.yml: `/home/worker/lineoa-dev/gcs-key.json:/app/config/gcs-key.json`
+
+**Drive `invalid_grant`:**
+- Root cause: OAuth app อยู่ใน **Testing mode** → refresh token หมดอายุทุก **7 วัน**
+- ถ้าเจอ `invalid_grant` ใน log → token หมดอายุ ต้องต่ออายุ
+- แก้ชั่วคราว: `cd backend && node scripts/refresh-drive-token.js` (รันบนเครื่อง, เปิด browser login Google)
+- **แก้ถาวร (ยังไม่ได้ทำ)**: Google Cloud Console → APIs & Services → OAuth consent screen → เปลี่ยน Publishing status: **Testing → Production**
+
+**สำคัญ:** รูป/ไฟล์ที่เห็นใน UI มาจาก **database** ไม่ใช่ GCS/Drive — GCS/Drive คือ backup เท่านั้น ถ้า upload พัง UI ยังทำงานได้ปกติ
+
 ### 🟡 ถัดไป
 
-1. **ทดสอบรูปภาพ** — ส่งรูปใน LINE → ตรวจ Drive folder `Boonyarit_bot/`
-2. **GCS** — ยังไม่มี `gcs-key.json` บน server → รูปจะ fallback ไป Drive อย่างเดียว
+1. **แก้ Drive token ถาวร** — OAuth consent screen → Production mode (สำคัญ ไม่งั้นจะหมดทุก 7 วัน)
+2. **Refresh token ทันที** — `cd backend && node scripts/refresh-drive-token.js` แล้วอัปเดต `GOOGLE_DRIVE_REFRESH_TOKEN` ใน server `.env` และ Google Drive backup
 3. **Drive Backup ครบแล้ว**: Boonyarit ✅ / mydev_CorePlan_Erp ✅ / tax-ocr ✅
 
 ### 🔑 Image vs File upload pattern
