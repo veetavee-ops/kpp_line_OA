@@ -407,3 +407,40 @@ ADMIN_NOTIFY_TOKEN=
 | 2 | จำกัด 10 ไฟล์/คน + แจ้งเตือนเมื่อเต็ม | ❌ |
 | 3 | เปิด canSearch อัตโนมัติเมื่อส่งไฟล์ครั้งแรก | ❌ |
 | 4 | ข้อความต้อนรับ / วิธีใช้ เมื่อ add friend | ❌ |
+
+---
+
+## 14. Inactive User Cleanup (แผนออกแบบ)
+
+### ปัญหา
+user ส่งไฟล์มาเก็บแล้วลืมบริการ → ไฟล์ค้างใน GCS ตลอดกาล → storage cost สะสม
+
+### นิยาม "inactive"
+- ไม่มี message ใหม่จาก user เกิน **180 วัน**
+- ใช้ `MAX(timestamp)` จาก Messages table — ไม่ต้องเพิ่ม field ใหม่
+
+### Flow (รัน cron ทุกวันตี 2 ใน cleanupService.js)
+
+```
+วัน 173 — ส่ง LINE push message เตือน
+  "ไฟล์ของคุณจะถูกลบใน 7 วัน เพราะไม่มีการใช้งาน 6 เดือน
+   ส่งไฟล์ใหม่หรือพิมพ์ใดๆ เพื่อต่ออายุ"
+
+วัน 180 — ลบข้อมูล
+  → ลบ GCS files ทั้งหมดของ user
+  → ลบ Messages ทั้งหมดของ user
+  → เก็บ User record ไว้ (ไม่ลบ เผื่อกลับมา)
+```
+
+### สิ่งที่ต้องสร้าง
+
+| # | งาน | ไฟล์ |
+|---|---|---|
+| 1 | `cleanupInactiveUsers()` | `cleanupService.js` |
+| 2 | ส่ง LINE push message เตือน | ใช้ `lineService.js` |
+| 3 | ลบ GCS files ของ user | ใช้ `gcsService.js` |
+
+### Edge Cases
+- user ส่งไฟล์ใหม่ก่อนครบ 180 วัน → reset นับใหม่อัตโนมัติ (query จาก message ล่าสุด)
+- user ไม่เคยส่งไฟล์ (แค่ text) → ไม่มี GCS → ลบแค่ messages
+- user ที่ `canSearch = true` → skip ไว้ก่อน เพราะตั้งใจใช้งาน

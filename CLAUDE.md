@@ -30,7 +30,7 @@
 
 ## Session Status
 
-### อัพเดท: 24 มิถุนายน 2569 (session 5)
+### อัพเดท: 26 มิถุนายน 2569 (session 6)
 
 ### ✅ Session 1 — Repo rename + Image Drive upload fix (24 มิ.ย. 69)
 
@@ -164,11 +164,37 @@ ssh root@168.144.137.42 "docker compose -f /home/worker/lineoa-dev/docker-compos
 - รูปเก่าในDriveที่ส่งก่อน token fix → DB ไม่มี `driveFileIds` → ไม่ขึ้นสารบัญ (ต้อง backfill script ถ้าต้องการ)
 - Drive delete ใน JS ทำได้แล้วเพราะ token fix session 4 — ไม่ต้องพึ่ง Python script
 
+### ✅ Session 6 — Local Dev Setup + Skills + Cleanup Plan (26 มิ.ย. 69)
+
+**Local Dev ครั้งแรก:**
+- `node_modules` ไม่ติดมากับ repo → ต้อง `npm install` ก่อน (ครั้งแรกเท่านั้น)
+- `backend/.env` ดึงจาก Drive ด้วย `/creds` → เขียนลง `backend/.env`
+- `frontend/vite.config.js` — เพิ่ม proxy `/api` + `/socket.io` → `localhost:3000` (ไม่มีจะ 404 ทุก call)
+- Admin account: `superadmin` / `kpp22312231` (reset จาก superuser)
+
+**start.ps1 + .vscode/tasks.json:**
+- `start.ps1` — แก้ใช้ `$root` แทน hardcode path + เช็ค nvm + เช็ค Node v24 + auto `npm install`
+- `.vscode/tasks.json` — เปิด 3 terminal ใน VS Code (backend, frontend, ngrok) + เปิด browser อัตโนมัติ
+- รัน dev: `Ctrl+Shift+B` → **Start Dev** (แนะนำ) หรือ `.\start.ps1` (เปิด window แยก)
+
+**Skills ที่สร้างใหม่:**
+- `~/.claude/commands/start.md` — global skill หา start script แล้วรัน (backup ใน Drive)
+- `.claude/commands/start.md` — project skill เฉพาะ Boonyarit (ติด repo)
+- `~/.claude/commands/gdrive-delete.md` — ลบไฟล์ Drive ด้วย OAuth token
+- `~/.claude/scripts/gdrive-update.py` — เพิ่ม `--delete` flag
+- `/creds` — แก้ให้ลบ `.env` ซ้ำอัตโนมัติหลัง load
+
+**Inactive User Cleanup — วางแผนแล้ว:**
+- ดู `PROJECT_OVERVIEW.md` หัวข้อ 14 — flow, edge cases, สิ่งที่ต้องสร้าง
+- ยังไม่ implement — ถ้าต้อง ดู plan ก่อนเสมอ
+
 ### 🟡 ถัดไป
 
 1. **ทดสอบลบไฟล์** — ลองเลือกลบในสารบัญ เช็คว่าหายจาก Drive + GCS จริง
-2. **Backfill script** (optional) — รูปเก่าใน Drive ที่ DB ไม่มี driveFileIds → scan Drive มา match กับ DB
-3. **ถ้าต้อง refresh token ในอนาคต** → ใช้ขั้นตอนใน session 4 + `--force-recreate` ไม่ใช่ `restart`
+2. **Implement Inactive User Cleanup** — ดูแผนใน PROJECT_OVERVIEW.md หัวข้อ 14
+3. **แก้ cleanupExpiredMessages** — ตอนนี้ลบ message ทั้งก้อน อันตรายถ้ามีลูกค้าจริง
+4. **Backfill script** (optional) — รูปเก่าใน Drive ที่ DB ไม่มี driveFileIds
+5. **ถ้าต้อง refresh token ในอนาคต** → ใช้ขั้นตอนใน session 4 + `--force-recreate` ไม่ใช่ `restart`
 
 ### 🔑 docker compose restart ไม่โหลด .env ใหม่
 

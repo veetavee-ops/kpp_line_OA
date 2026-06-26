@@ -1,0 +1,43 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "backend",
+      "type": "shell",
+      "command": "if (-not (Test-Path node_modules)) { npm install }; npm run dev",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "presentation": { "panel": "new", "group": "dev", "reveal": "always" },
+      "isBackground": true
+    },
+    {
+      "label": "frontend",
+      "type": "shell",
+      "command": "if (-not (Test-Path node_modules)) { npm install }; npm run dev",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "presentation": { "panel": "new", "group": "dev", "reveal": "always" },
+      "isBackground": true
+    },
+    {
+      "label": "ngrok",
+      "type": "shell",
+      "command": "npm run ngrok",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "presentation": { "panel": "new", "group": "dev", "reveal": "always" },
+      "isBackground": true
+    },
+    {
+      "label": "open-browser",
+      "type": "shell",
+      "command": "Start-Sleep -Seconds 3; Start-Process 'http://localhost:5173'",
+      "presentation": { "reveal": "never", "panel": "shared" },
+      "isBackground": true
+    },
+    {
+      "label": "Start Dev",
+      "dependsOn": ["backend", "frontend", "ngrok", "open-browser"],
+      "dependsOrder": "parallel",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "never" }
+    }
+  ]
+}
