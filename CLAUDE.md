@@ -30,7 +30,7 @@
 
 ## Session Status
 
-### อัพเดท: 26 มิถุนายน 2569 (session 6)
+### อัพเดท: 27 มิถุนายน 2569 (session 8)
 
 ### ✅ Session 1 — Repo rename + Image Drive upload fix (24 มิ.ย. 69)
 
@@ -200,9 +200,30 @@ ssh root@168.144.137.42 "docker compose -f /home/worker/lineoa-dev/docker-compos
 - ใช้ raw SQL `JOIN "Users"` เหมือน pattern ใน messages.js
 - รันใน `startCleanupCron()` ทุกรอบ (ตี 2 ทุกวัน)
 
+### ✅ Session 8 — วิเคราะห์ cleanupExpiredMessages + GCS URL pattern (27 มิ.ย. 69)
+
+**ไม่มี code change — เป็น session วิเคราะห์:**
+
+**cleanupExpiredMessages — ปัญหาที่พบ:**
+- บรรทัด `await msg.destroy()` ลบ message record ทั้งหมดออกจาก DB อันตราย
+- ควรเก็บ message ไว้ (ประวัติแชท) แค่ล้าง gcsUrl ออกจาก metadata
+
+**GCS URL ที่เก็บใน DB:**
+- DB เก็บ `gcsUrl` (signed URL เต็มๆ) + `gcsPath` + `gcsUrlExpires: '2099-12-31'`
+- Frontend มี fallback: `gcsUrl || mediaUrl(gcsPath)` → `/api/media?path=` → generate URL ใหม่
+- ฉะนั้น `gcsUrl` ใน DB เป็น cache เท่านั้น — `gcsPath` คือสิ่งสำคัญจริงๆ
+
+**Pattern ที่ดีกว่า (Pattern 2 — ยังไม่ implement):**
+- เลิกเก็บ `gcsUrl`/`gcsUrls`/`gcsUrlExpires` ใน DB เลย
+- เก็บแค่ `gcsPath` → `/api/media` generate URL on-demand (มี cache 50 นาทีอยู่แล้ว)
+- จะทำให้ `cleanupExpiredMessages` ไม่มีความหมายอีกต่อไป
+- **ยังไม่ได้ตัดสินใจว่าจะ migrate หรือเปล่า**
+
 ### 🟡 ถัดไป
 
-1. **แก้ cleanupExpiredMessages** — ตอนนี้ลบ message ทั้งก้อน อันตรายถ้ามีลูกค้าจริง
+1. **cleanupExpiredMessages** — เลือก 1 ทาง:
+   - **ทางเดียวกับ pattern ปัจจุบัน:** แก้ให้ล้างแค่ `gcsUrl`/`gcsUrls`/`gcsUrlExpires` (keep `gcsPath`, keep message record) แทน `msg.destroy()`
+   - **Migrate ไป Pattern 2:** เลิกเก็บ `gcsUrl` ใน DB เลย ใช้แค่ `gcsPath` + `/api/media` → ลบ `cleanupExpiredMessages` ทิ้ง
 2. **ถ้าต้อง refresh token ในอนาคต** → ใช้ขั้นตอนใน session 4 + `--force-recreate` ไม่ใช่ `restart`
 
 ### 🔑 docker compose restart ไม่โหลด .env ใหม่
