@@ -48,6 +48,7 @@ export default function ChatWindow({
   searching,
   onSelectGroup,
   onToggleImportant,
+  myLineUserId,
 }) {
   const messagesEndRef = useRef(null)
   const containerRef = useRef(null)
@@ -157,22 +158,30 @@ export default function ChatWindow({
       {/* ── Header ─────────────────────────────────────────── */}
       <header className="header">
         <div className="header-left">
-          <div
-            className={`group-avatar-lg${currentGroup?.isPrivate ? ' group-avatar-lg--private' : ''}`}
-            style={{ background: currentGroup ? getColor(currentGroup.groupName) : '#dde3ea' }}
-          >
-            {currentGroup?.isPrivate ? (
-              <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
-                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-              </svg>
-            ) : (
-              currentGroup ? getInitials(currentGroup.groupName) : (
-                <svg viewBox="0 0 24 24" fill="rgba(0,0,0,0.2)" width="20" height="20">
-                  <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+          {currentGroup?.pictureUrl ? (
+            <img
+              className={`group-avatar-lg group-avatar-lg--img${currentGroup.isPrivate ? ' group-avatar-lg--private' : ''}`}
+              src={currentGroup.pictureUrl}
+              alt={currentGroup.groupName}
+            />
+          ) : (
+            <div
+              className={`group-avatar-lg${currentGroup?.isPrivate ? ' group-avatar-lg--private' : ''}`}
+              style={{ background: currentGroup ? getColor(currentGroup.groupName) : '#dde3ea' }}
+            >
+              {currentGroup?.isPrivate ? (
+                <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
+                  <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
                 </svg>
-              )
-            )}
-          </div>
+              ) : (
+                currentGroup ? getInitials(currentGroup.groupName) : (
+                  <svg viewBox="0 0 24 24" fill="rgba(0,0,0,0.2)" width="20" height="20">
+                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+                  </svg>
+                )
+              )}
+            </div>
+          )}
           <div className="header-group-info">
             <h1 className="group-title">
               {currentGroup?.groupName || 'เลือกแชท / กลุ่ม'}
@@ -246,6 +255,7 @@ export default function ChatWindow({
                   prevMsg={importantMessages[i - 1]}
                   allMessages={importantMessages}
                   onToggleImportant={handleToggleImportant}
+                  myLineUserId={myLineUserId}
                 />
               ))
             )}
@@ -341,6 +351,7 @@ export default function ChatWindow({
                   prevMsg={filtered[i - 1]}
                   allMessages={messages}
                   onToggleImportant={handleToggleImportant}
+                  myLineUserId={myLineUserId}
                 />
               </div>
             )

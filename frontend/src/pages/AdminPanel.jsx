@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchUsers, createUser, deleteUser, assignGroupToUser, unassignGroupFromUser } from '../api/users';
+import { fetchUsers, createUser, updateUserLineId, deleteUser, assignGroupToUser, unassignGroupFromUser } from '../api/users';
 import { fetchGroups } from '../api/messages';
 import { fetchLineUsers, toggleLineUserSearch } from '../api/lineUsers';
 import { fetchSettings, updateSetting } from '../api/settings';
@@ -12,6 +12,7 @@ export default function AdminPanel() {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('user');
+  const [newLineUserId, setNewLineUserId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [lineUsers, setLineUsers] = useState([]);
@@ -65,17 +66,29 @@ export default function AdminPanel() {
   const handleCreate = async () => {
     if (!newUsername.trim() || !newPassword.trim()) return;
     try {
-      const created = await createUser(newUsername.trim(), newPassword.trim(), newRole);
+      const created = await createUser(newUsername.trim(), newPassword.trim(), newRole, newLineUserId || null);
       setUsers((prev) => [...prev, created]);
       setNewUsername('');
       setNewPassword('');
       setNewRole('user');
+      setNewLineUserId('');
       setError('');
     } catch (err) {
       setError(err.response?.data?.error || 'สร้างไม่สำเร็จ');
       setNewUsername('');
       setNewPassword('');
       setNewRole('user');
+      setNewLineUserId('');
+    }
+  };
+
+  const handleUpdateLineId = async (userId, lineUserId) => {
+    try {
+      const updated = await updateUserLineId(userId, lineUserId || null);
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, lineUserId: updated.lineUserId, groupIds: updated.groupIds } : u)));
+      setSelectedUser((prev) => (prev?.id === userId ? { ...prev, lineUserId: updated.lineUserId, groupIds: updated.groupIds } : prev));
+    } catch (err) {
+      setError(err.response?.data?.error || 'อัปเดต LINE ID ไม่สำเร็จ');
     }
   };
 
@@ -147,8 +160,21 @@ export default function AdminPanel() {
               <option value="user">User</option>
               <option value="admin">Admin</option>
             </select>
+            <select
+              className="ap-select"
+              value={newLineUserId}
+              onChange={(e) => setNewLineUserId(e.target.value)}
+            >
+              <option value="">— ไม่ผูก LINE ID —</option>
+              {lineUsers.map((u) => (
+                <option key={u.userId} value={u.userId}>{u.displayName || u.userId}</option>
+              ))}
+            </select>
             <button className="ap-btn-primary" onClick={handleCreate}>สร้าง</button>
           </div>
+          <p className="ap-note">
+            ผูก LINE ID เพื่อให้ข้อความของคนนี้ขึ้นชิดขวาตอนดูแชท — ต้องให้เขาทักในกลุ่ม/DM มาก่อนอย่างน้อย 1 ครั้ง ถึงจะเลือกได้จากลิสต์นี้
+          </p>
         </div>
 
         <div className="ap-columns">
@@ -192,6 +218,19 @@ export default function AdminPanel() {
                 {selectedUser.role === 'admin' && (
                   <p className="ap-note">Admin เห็นทุกกลุ่มอยู่แล้ว — ไม่ต้อง assign</p>
                 )}
+                <div className="ap-form-row">
+                  <select
+                    className="ap-select"
+                    value={selectedUser.lineUserId || ''}
+                    onChange={(e) => handleUpdateLineId(selectedUser.id, e.target.value)}
+                  >
+                    <option value="">— ไม่ผูก LINE ID —</option>
+                    {lineUsers.map((u) => (
+                      <option key={u.userId} value={u.userId}>{u.displayName || u.userId}</option>
+                    ))}
+                  </select>
+                </div>
+                <p className="ap-note">LINE ID ที่ผูกไว้: {selectedUser.lineUserId || 'ยังไม่ได้ผูก'}</p>
                 <ul className="ap-group-list">
                   {groups.map((g) => {
                     const isOn = selectedUser.groupIds.includes(g.groupId);

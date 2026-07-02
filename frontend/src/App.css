@@ -71,6 +71,72 @@ body {
   color: var(--primary-color);
 }
 
+.header-brand-photo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.header-brand-photo:hover {
+  transform: scale(1.1);
+}
+
+/* ─── Logo Modal (คลิกรูปโลโก้เล็กใน header → ขยาย + ลิงก์ achalee.com) ──── */
+.logo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+.logo-modal {
+  position: relative;
+  background: var(--bg-surface);
+  border-radius: 16px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+}
+.logo-modal-img {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+.logo-modal-link {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+.logo-modal-link:hover {
+  text-decoration: underline;
+}
+.logo-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+}
+.logo-modal-close:hover {
+  color: var(--text-primary);
+}
+
 .header-brand-name {
   font-size: 14px;
   font-weight: 700;
@@ -148,6 +214,7 @@ body {
   padding: 12px;
   overflow: hidden;
   height: calc(100dvh - var(--header-height));
+  transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @media screen and (max-width: 768px) {
@@ -189,9 +256,9 @@ body {
 ::-webkit-scrollbar-thumb { background: #d4c4a8; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #c2ae8a; }
 
-/* ── Mobile ───────────────────────────────────────────────────── */
+/* ── ปุ่มเปิด popup ตั้งค่าการสรุป AI (มุมซ้ายบน) ─────────────────── */
 .menu-btn {
-  display: none;
+  display: flex;
   background: none;
   border: none;
   cursor: pointer;
@@ -206,12 +273,12 @@ body {
 .header-left-controls {
   display: flex;
   align-items: center;
+  gap: 4px;
   min-width: 40px;
 }
 
 @media screen and (max-width: 768px) {
   .app-header { padding: 0 12px; gap: 8px; }
-  .menu-btn { display: block; }
   .header-brand { position: static; transform: none; flex: 1; justify-content: flex-start; min-width: 0; }
   .header-brand-name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .user-info { gap: 6px; }

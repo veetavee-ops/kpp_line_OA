@@ -3,7 +3,6 @@
   background: var(--bg-sidebar);
   position: relative; min-width: 0; overflow: hidden;
   border-radius: 16px;
-  border: 1px solid var(--border-color);
 }
 
 @media screen and (max-width: 768px) {

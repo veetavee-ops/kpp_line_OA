@@ -30,6 +30,25 @@
   margin-top: 15px;
 }
 
+/* ─── Own Message (matches logged-in admin's linked LINE ID) → right side ── */
+.msg--own {
+  flex-direction: row-reverse;
+  margin-left: auto;
+}
+.msg--own .msg-content {
+  align-items: flex-end;
+}
+.msg--own .msg-meta {
+  flex-direction: row-reverse;
+}
+.msg--own .msg-bubble-row {
+  flex-direction: row-reverse;
+}
+.msg--own .msg-text {
+  background: rgba(217, 119, 66, 0.18);
+  color: var(--text-primary);
+}
+
 /* ─── Avatar ─────────────────────────────────────────────────────────────── */
 .msg-avatar {
   width: 36px;

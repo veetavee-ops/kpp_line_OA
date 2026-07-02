@@ -44,6 +44,7 @@ export default function Sidebar({
   aiProvider = 'groq',
   onAiProviderChange,
   onOpenDriveFiles,
+  onPinChange,
 }) {
   const [dates, setDates] = useState([]);
   const [loadingDates, setLoadingDates] = useState(true);
@@ -69,6 +70,56 @@ export default function Sidebar({
   const isResizing = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(280);
+
+  // ปักหมุด: ค่าเริ่มต้นคือ "ปักไว้" (ฝังเป็น sidebar ปกติ ไม่ลอย) ยกเว้นผู้ใช้เคยกด unpin ไว้ก่อนหน้า
+  // ถ้าปักไว้ จะไม่ auto-hide ตอนเมาส์ออก (จำค่าไว้ข้ามเซสชันด้วย localStorage)
+  const [isPinned, setIsPinned] = useState(() => {
+    const stored = localStorage.getItem("sidebarPinned");
+    return stored === null ? true : stored === "true";
+  });
+  // hover peek: เมาส์ชนขอบซ้ายจอ → โผล่มาเอง, เมาส์ออก → หดกลับ (ถ้าไม่ได้ปักหมุด)
+  const [isHovering, setIsHovering] = useState(false);
+  const hoverHideTimer = useRef(null);
+
+  const visible = isOpen || isPinned || isHovering;
+
+  const cancelHoverHide = () => {
+    if (hoverHideTimer.current) {
+      clearTimeout(hoverHideTimer.current);
+      hoverHideTimer.current = null;
+    }
+  };
+  const handleHoverEnter = () => {
+    cancelHoverHide();
+    setIsHovering(true);
+  };
+  const handleHoverLeave = () => {
+    if (isPinned) return;
+    cancelHoverHide();
+    hoverHideTimer.current = setTimeout(() => {
+      setIsHovering(false);
+      onClose();
+    }, 200);
+  };
+
+  const togglePin = () => {
+    setIsPinned((prev) => {
+      const next = !prev;
+      localStorage.setItem("sidebarPinned", String(next));
+      // เพิ่งเลิกปักหมุด แต่เมาส์ยังอยู่บน panel นี้ (เพิ่งกดปุ่มในนี้เอง)
+      // → ถือว่ากำลัง hover อยู่ก่อน รอเมาส์ออกจริงๆ ค่อย auto-hide แทนที่จะหายวับทันที
+      if (!next) setIsHovering(true);
+      return next;
+    });
+  };
+
+  useEffect(() => cancelHoverHide, []);
+
+  // แจ้ง parent ว่าตอนนี้ปักหมุดอยู่กว้างเท่าไหร่ — เอาไปบีบพื้นที่แชทให้แคบลง
+  // จะได้ไม่ลอยทับบังข้อความฝั่งซ้าย (ตอนไม่ได้ปักหมุด ลอยทับได้ปกติ)
+  useEffect(() => {
+    onPinChange?.(isPinned ? sidebarWidth : 0);
+  }, [isPinned, sidebarWidth, onPinChange]);
 
   const onResizeMouseDown = useCallback(
     (e) => {
@@ -225,13 +276,21 @@ export default function Sidebar({
 
   return (
     <>
+      {/* แถบบางๆ ชิดขอบซ้ายจอ — เอาเมาส์ไปชนแล้วเมนูจะโผล่มาเอง (เฉพาะตอนที่ยังไม่เปิดอยู่) */}
       <div
-        className={`sidebar-overlay ${isOpen ? "active" : ""}`}
+        className="sidebar-hover-trigger"
+        onMouseEnter={handleHoverEnter}
+        onMouseLeave={handleHoverLeave}
+      />
+      <div
+        className={`sidebar-overlay ${isOpen && !isPinned ? "active" : ""}`}
         onClick={onClose}
       />
       <aside
-        className={`sidebar ${isOpen ? "active" : ""}`}
-        style={{ width: sidebarWidth }}
+        className={`sidebar ${visible ? "active" : ""}${isPinned ? " sidebar--pinned" : ""}`}
+        style={{ width: sidebarWidth, left: visible ? 0 : -sidebarWidth }}
+        onMouseEnter={handleHoverEnter}
+        onMouseLeave={handleHoverLeave}
       >
         <div
           className="sidebar-resize-handle"
@@ -240,6 +299,16 @@ export default function Sidebar({
         <div
           className={`sidebar-header${isControlsOpen ? "" : " sidebar-header--collapsed"}`}
         >
+          <button
+            className={`sidebar-pin-btn${isPinned ? " sidebar-pin-btn--active" : ""}`}
+            onClick={togglePin}
+            title={isPinned ? "เลิกปักหมุด" : "ปักหมุดเมนูไว้"}
+            aria-label={isPinned ? "เลิกปักหมุด" : "ปักหมุดเมนูไว้"}
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
+            </svg>
+          </button>
           <div
             className="sidebar-brand"
             onClick={() => setIsControlsOpen((v) => !v)}

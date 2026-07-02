@@ -42,6 +42,10 @@ export default function App() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showLogoModal, setShowLogoModal] = useState(false);
+  // ปักหมุด sidebar ไว้ → ต้องบีบพื้นที่แชทให้แคบลงเท่ากับความกว้าง sidebar
+  // ไม่งั้น sidebar จะลอยทับบังข้อความฝั่งซ้ายของแชท
+  const [pinnedSidebarWidth, setPinnedSidebarWidth] = useState(0);
   const [showLineIdInput, setShowLineIdInput] = useState(false);
   const [lineIdDraft, setLineIdDraft] = useState('');
   const [showChangePassword, setShowChangePassword] = useState(false); // true = กำลังเปิด modal เปลี่ยนรหัสผ่านอยู่
@@ -237,6 +241,16 @@ export default function App() {
       <div className="app-header">
         <div className="header-left-controls">
           <button
+            className="menu-btn"
+            onClick={toggleSidebar}
+            aria-label="ตั้งค่าการสรุป AI"
+            title="ตั้งค่าการสรุป AI"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" width="19" height="19">
+              <path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
+            </svg>
+          </button>
+          <button
             className={`btn-header-icon${showDashboard ? ' active' : ''}`}
             onClick={() => setShowDashboard((v) => !v)}
             title="ภาพรวม"
@@ -247,12 +261,22 @@ export default function App() {
           </button>
         </div>
         <div className="header-brand">
+          <img
+            className="header-brand-photo"
+            src="/favicon.png"
+            alt="Boonyarit"
+            width="24"
+            height="24"
+            role="button"
+            tabIndex={0}
+            onClick={() => setShowLogoModal(true)}
+          />
           <span className="header-brand-icon">
             <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
               <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
             </svg>
           </span>
-          <span className="header-brand-name">Boonyarit LINE OA</span>
+          <span className="header-brand-name">Boonyarit</span>
         </div>
         <div className="user-info">
           {admin.role === 'superuser' && (
@@ -287,19 +311,13 @@ export default function App() {
             </svg>
             <span>ออกจากระบบ</span>
           </button>
-          <button
-            className="menu-btn"
-            onClick={toggleSidebar}
-            aria-label="เปิดเมนู"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-              <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-            </svg>
-          </button>
         </div>
       </div>
 
-      <div className="app-body">
+      <div
+        className="app-body"
+        style={pinnedSidebarWidth ? { paddingLeft: pinnedSidebarWidth + 12 } : undefined}
+      >
         {showDashboard ? (
           <DashboardPage
             onSelectGroup={(groupId) => {
@@ -321,6 +339,7 @@ export default function App() {
             searching={searching}
             onSelectGroup={(groupId) => { setSelectedGroup(groupId); setSearch(''); }}
             onToggleImportant={handleToggleImportant}
+            myLineUserId={admin.lineUserId}
           />
         )}
         <Sidebar
@@ -343,6 +362,7 @@ export default function App() {
           aiProvider={aiProvider}
           onAiProviderChange={setAiProvider}
           onOpenDriveFiles={() => setShowDriveFiles(true)}
+          onPinChange={setPinnedSidebarWidth}
         />
       </div>
 
@@ -362,6 +382,32 @@ export default function App() {
       {/* modal เปลี่ยนรหัสผ่าน — เด้งขึ้นมาก็ต่อเมื่อ showChangePassword เป็น true เท่านั้น */}
       {showChangePassword && (
         <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+      )}
+
+      {/* modal ขยายรูปโลโก้ — กดที่รูปเล็กบน header แล้วเด้งรูปใหญ่ พร้อมลิงก์ไป achalee.com */}
+      {showLogoModal && (
+        <div className="logo-modal-overlay" onClick={() => setShowLogoModal(false)}>
+          <div className="logo-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="logo-modal-close"
+              onClick={() => setShowLogoModal(false)}
+              aria-label="ปิด"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+              </svg>
+            </button>
+            <img className="logo-modal-img" src="/favicon.png" alt="Boonyarit" />
+            <a
+              className="logo-modal-link"
+              href="https://achalee.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              achalee.com
+            </a>
+          </div>
+        </div>
       )}
     </div>
   );

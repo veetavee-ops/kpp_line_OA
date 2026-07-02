@@ -43,6 +43,13 @@ router.get('/', async (req, res) => {
       where.groupId = groupId;
     }
 
+    if (req.admin.role === 'user') {
+      const allowed = await getAllowedGroupIds(req.admin.id);
+      if (!allowed.includes(groupId)) {
+        return res.json([]);
+      }
+    }
+
     // Pagination: fetch messages older than `before` timestamp
     if (before) {
       where.timestamp = { [Op.lt]: new Date(before) };
@@ -101,6 +108,17 @@ router.post('/summarize-day', async (req, res) => {
       whereClause.groupId = groupId;
     }
 
+    if (req.admin.role === 'user') {
+      const allowed = await getAllowedGroupIds(req.admin.id);
+      if (groupId && groupId !== 'all') {
+        if (!allowed.includes(groupId)) {
+          return res.json({ summary: 'ไม่มีข้อความในช่วงนี้', messageCount: 0, groupCount: 0 });
+        }
+      } else {
+        whereClause.groupId = { [Op.in]: allowed.length ? allowed : ['__none__'] };
+      }
+    }
+
     const allMessages = await Message.findAll({
       where: whereClause,
       include: [
@@ -148,7 +166,7 @@ router.get('/drive-files', async (req, res) => {
       const allowed = await getAllowedGroupIds(req.admin.id);
       if (!groupId) {
         where.groupId = { [Op.in]: allowed.length ? allowed : ['__none__'] };
-      } else if (!groupId.startsWith('private') && !allowed.includes(groupId)) {
+      } else if (!allowed.includes(groupId)) {
         return res.json([]);
       }
     }
@@ -267,7 +285,7 @@ router.get('/important', async (req, res) => {
       const allowed = await getAllowedGroupIds(req.admin.id);
       if (!groupId) {
         where.groupId = { [Op.in]: allowed.length ? allowed : ['__none__'] };
-      } else if (!groupId.startsWith('private') && !allowed.includes(groupId)) {
+      } else if (!allowed.includes(groupId)) {
         return res.json([]);
       }
     }
@@ -298,7 +316,8 @@ router.patch('/:messageId/important', async (req, res) => {
 
     if (req.admin.role === 'user') {
       const allowed = await getAllowedGroupIds(req.admin.id);
-      if (msg.groupId && !allowed.includes(msg.groupId)) {
+      const scopeId = msg.groupId || `private_${msg.userId}`;
+      if (!allowed.includes(scopeId)) {
         return res.status(403).json({ error: 'ไม่มีสิทธิ์' });
       }
     }
